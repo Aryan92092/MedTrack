@@ -1,0 +1,180 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Add Medicine</h2>
+    <form method="post" class="enhanced-form">
+        <!-- Basic Information -->
+        <div class="form-section">
+            <h3>Basic Information</h3>
+            <div class="form-grid">
+                <label>Medicine Name *
+                    <input type="text" name="name" placeholder="e.g., Paracetamol 500mg" required />
+                </label>
+                <label>Category
+                    <select name="category">
+                        <option value="">Select Category</option>
+                        <option value="Pain Relief">Pain Relief</option>
+                        <option value="Antibiotics">Antibiotics</option>
+                        <option value="Vitamins">Vitamins</option>
+                        <option value="Cough & Cold">Cough & Cold</option>
+                        <option value="Digestive">Digestive</option>
+                        <option value="Cardiovascular">Cardiovascular</option>
+                        <option value="Diabetes">Diabetes</option>
+                        <option value="Other">Other</option>
+                    </select>
+                </label>
+                <label>Manufacturer
+                    <input type="text" name="manufacturer" placeholder="e.g., Johnson & Johnson" />
+                </label>
+                <label>Batch Number
+                    <input type="text" name="batch_number" placeholder="e.g., BATCH123456" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Inventory Information -->
+        <div class="form-section">
+            <h3>Inventory Information</h3>
+            <div class="form-grid">
+                <label>Quantity *
+                    <input type="number" name="quantity" min="1" required />
+                </label>
+                <label>Expiry Date *
+                    <input type="date" name="expiry_date" required />
+                </label>
+                <label>Minimum Stock Level
+                    <input type="number" name="min_stock_level" min="1" value="10" />
+                </label>
+                <label>Maximum Stock Level
+                    <input type="number" name="max_stock_level" min="1" value="1000" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Financial Information -->
+        <div class="form-section">
+            <h3>Financial Information</h3>
+            <div class="form-grid">
+                <label>Purchase Price
+                    <input type="number" name="purchase_price" step="0.01" min="0" placeholder="0.00" />
+                </label>
+                <label>Selling Price
+                    <input type="number" name="selling_price" step="0.01" min="0" placeholder="0.00" />
+                </label>
+            </div>
+        </div>
+
+        <!-- Form Actions -->
+        <div class="form-actions">
+            <button type="submit" class="btn primary">Add Medicine</button>
+            <button type="reset" class="btn secondary">Reset Form</button>
+        </div>
+    </form>
+
+    <!-- Quick Add Section -->
+    <div class="quick-add-section">
+        <h3>Quick Add Common Medicines</h3>
+        <div class="quick-add-grid">
+            <button class="quick-add-btn" onclick="quickAdd('Paracetamol 500mg', 'Pain Relief', 100, 30)">
+                <span class="medicine-name">Paracetamol 500mg</span>
+                <span class="medicine-category">Pain Relief</span>
+            </button>
+            <button class="quick-add-btn" onclick="quickAdd('Ibuprofen 200mg', 'Pain Relief', 80, 30)">
+                <span class="medicine-name">Ibuprofen 200mg</span>
+                <span class="medicine-category">Pain Relief</span>
+            </button>
+            <button class="quick-add-btn" onclick="quickAdd('Amoxicillin 250mg', 'Antibiotics', 60, 30)">
+                <span class="medicine-name">Amoxicillin 250mg</span>
+                <span class="medicine-category">Antibiotics</span>
+            </button>
+            <button class="quick-add-btn" onclick="quickAdd('Vitamin C 500mg', 'Vitamins', 200, 90)">
+                <span class="medicine-name">Vitamin C 500mg</span>
+                <span class="medicine-category">Vitamins</span>
+            </button>
+        </div>
+    </div>
+</section>
+
+<script>
+// Quick add functionality
+function quickAdd(name, category, quantity, daysToExpiry) {
+    const form = document.querySelector('form');
+    const expiryDate = new Date();
+    expiryDate.setDate(expiryDate.getDate() + daysToExpiry);
+    
+    // Fill form fields
+    form.querySelector('input[name="name"]').value = name;
+    form.querySelector('select[name="category"]').value = category;
+    form.querySelector('input[name="quantity"]').value = quantity;
+    form.querySelector('input[name="expiry_date"]').value = expiryDate.toISOString().split('T')[0];
+    
+    // Scroll to form
+    form.scrollIntoView({ behavior: 'smooth' });
+    
+    // Highlight the filled fields
+    form.querySelector('input[name="name"]').focus();
+}
+
+// Form validation
+document.querySelector('form').addEventListener('submit', function(e) {
+    const minStock = parseInt(document.querySelector('input[name="min_stock_level"]').value);
+    const maxStock = parseInt(document.querySelector('input[name="max_stock_level"]').value);
+    
+    if (minStock >= maxStock) {
+        e.preventDefault();
+        alert('Minimum stock level must be less than maximum stock level');
+        return false;
+    }
+    
+    const quantity = parseInt(document.querySelector('input[name="quantity"]').value);
+    if (quantity < minStock) {
+        if (!confirm(`Quantity (${quantity}) is below minimum stock level (${minStock}). Continue anyway?`)) {
+            e.preventDefault();
+            return false;
+        }
+    }
+    
+    if (quantity > maxStock) {
+        if (!confirm(`Quantity (${quantity}) exceeds maximum stock level (${maxStock}). Continue anyway?`)) {
+            e.preventDefault();
+            return false;
+        }
+    }
+});
+
+// Auto-calculate expiry date based on category
+document.querySelector('select[name="category"]').addEventListener('change', function() {
+    const category = this.value;
+    const expiryInput = document.querySelector('input[name="expiry_date"]');
+    
+    if (!expiryInput.value) {
+        const today = new Date();
+        let daysToAdd = 365; // Default 1 year
+        
+        // Set different expiry periods based on category
+        switch(category) {
+            case 'Antibiotics':
+                daysToAdd = 365; // 1 year
+                break;
+            case 'Vitamins':
+                daysToAdd = 730; // 2 years
+                break;
+            case 'Pain Relief':
+                daysToAdd = 1095; // 3 years
+                break;
+            case 'Cough & Cold':
+                daysToAdd = 365; // 1 year
+                break;
+            default:
+                daysToAdd = 365; // 1 year
+        }
+        
+        const expiryDate = new Date(today);
+        expiryDate.setDate(today.getDate() + daysToAdd);
+        expiryInput.value = expiryDate.toISOString().split('T')[0];
+    }
+});
+</script>
+{% endblock %}
+
+

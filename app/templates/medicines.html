@@ -1,0 +1,32 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Medicines (by nearest expiry)</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Expiry</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in medicines %}
+            <tr>
+                <td>{{ m.name }}</td>
+                <td>{{ m.quantity }}</td>
+                <td>{{ m.expiry_date.strftime('%Y-%m-%d') }}</td>
+                <td>
+                    <form action="{{ url_for('main.delete_medicine', med_id=m.id) }}" method="post" onsubmit="return confirm('Delete this medicine?')">
+                        <button class="btn danger" type="submit">Delete</button>
+                    </form>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}
+
+

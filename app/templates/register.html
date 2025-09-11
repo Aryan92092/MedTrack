@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+{% block content %}
+<section class="auth-card">
+    <h2>Create account</h2>
+    <form method="post" class="form-grid">
+        <label>Username
+            <input type="text" name="username" placeholder="Choose a username" required />
+        </label>
+        <label>Password
+            <input type="password" name="password" placeholder="Create a password" required />
+        </label>
+        <label>Confirm Password
+            <input type="password" name="confirm" placeholder="Re-enter password" required />
+        </label>
+        <button type="submit" class="btn primary">Register</button>
+    </form>
+    <p style="margin-top:10px;color:#9ca3af;">Have an account? <a href="{{ url_for('auth.login') }}">Login</a></p>
+    <p style="margin-top:10px;color:#9ca3af;">Default admin is <code>admin/admin123</code> (if seeded).</p>
+</section>
+{% endblock %}
+
+

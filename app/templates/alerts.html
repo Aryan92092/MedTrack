@@ -1,0 +1,257 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Inventory Alerts</h2>
+    
+    <div class="alerts-header">
+        <div class="alerts-summary">
+            <div class="summary-card">
+                <h3>Total Alerts</h3>
+                <span class="count">{{ alerts|length }}</span>
+            </div>
+            <div class="summary-card">
+                <h3>Unread</h3>
+                <span class="count">{{ alerts|selectattr('is_read', 'equalto', false)|list|length }}</span>
+            </div>
+            <div class="summary-card">
+                <h3>Critical</h3>
+                <span class="count critical">{{ alerts|selectattr('severity', 'equalto', 'critical')|list|length }}</span>
+            </div>
+        </div>
+        
+        <div class="alerts-actions">
+            <button class="btn btn-primary" onclick="markAllRead()">Mark All Read</button>
+            <button class="btn btn-secondary" onclick="refreshAlerts()">Refresh</button>
+        </div>
+    </div>
+
+    <!-- Filter and Sort Options -->
+    <div class="alerts-controls">
+        <div class="filter-group">
+            <label for="severityFilter">Filter by Severity:</label>
+            <select id="severityFilter" onchange="filterAlerts()">
+                <option value="">All</option>
+                <option value="critical">Critical</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="typeFilter">Filter by Type:</label>
+            <select id="typeFilter" onchange="filterAlerts()">
+                <option value="">All</option>
+                <option value="expired">Expired</option>
+                <option value="low_stock">Low Stock</option>
+                <option value="expiring_soon">Expiring Soon</option>
+                <option value="high_risk">High Risk</option>
+            </select>
+        </div>
+        
+        <div class="filter-group">
+            <label for="statusFilter">Filter by Status:</label>
+            <select id="statusFilter" onchange="filterAlerts()">
+                <option value="">All</option>
+                <option value="unread">Unread</option>
+                <option value="read">Read</option>
+            </select>
+        </div>
+    </div>
+
+    <!-- Alerts List -->
+    <div class="alerts-list" id="alertsList">
+        {% if alerts %}
+            {% for alert in alerts %}
+            <div class="alert-item alert-{{ alert.severity }} {% if alert.is_read %}read{% else %}unread{% endif %}" 
+                 data-severity="{{ alert.severity }}" 
+                 data-type="{{ alert.alert_type }}" 
+                 data-read="{{ alert.is_read|lower }}">
+                <div class="alert-icon">
+                    {% if alert.severity == 'critical' %}
+                        <span class="icon">🚨</span>
+                    {% elif alert.severity == 'high' %}
+                        <span class="icon">⚠️</span>
+                    {% elif alert.severity == 'medium' %}
+                        <span class="icon">ℹ️</span>
+                    {% else %}
+                        <span class="icon">💡</span>
+                    {% endif %}
+                </div>
+                
+                <div class="alert-content">
+                    <div class="alert-header">
+                        <h4 class="alert-title">{{ alert.alert_type.replace('_', ' ').title() }}</h4>
+                        <span class="alert-severity severity-{{ alert.severity }}">{{ alert.severity.upper() }}</span>
+                    </div>
+                    
+                    <div class="alert-message">
+                        {{ alert.message }}
+                    </div>
+                    
+                    <div class="alert-meta">
+                        <span class="alert-time">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+                        {% if alert.medicine %}
+                        <span class="alert-medicine">Medicine: {{ alert.medicine.name }}</span>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="alert-actions">
+                    {% if not alert.is_read %}
+                    <button class="btn btn-sm btn-primary" onclick="markAsRead({{ alert.id }})">
+                        Mark Read
+                    </button>
+                    {% endif %}
+                    {% if alert.medicine %}
+                    <button class="btn btn-sm btn-secondary" onclick="viewMedicine({{ alert.medicine.id }})">
+                        View Medicine
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-alerts">
+                <div class="no-alerts-icon">✅</div>
+                <h3>No Alerts</h3>
+                <p>Your inventory is in good shape! No alerts at this time.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Pagination (if needed) -->
+    {% if alerts|length > 20 %}
+    <div class="pagination">
+        <button class="btn btn-sm" onclick="loadPage(1)">First</button>
+        <button class="btn btn-sm" onclick="loadPage(currentPage - 1)">Previous</button>
+        <span class="page-info">Page 1 of 1</span>
+        <button class="btn btn-sm" onclick="loadPage(currentPage + 1)">Next</button>
+        <button class="btn btn-sm" onclick="loadPage(totalPages)">Last</button>
+    </div>
+    {% endif %}
+</section>
+
+<script>
+let currentPage = 1;
+let totalPages = 1;
+
+// Mark alert as read
+async function markAsRead(alertId) {
+    try {
+        const response = await fetch(`/alerts/${alertId}/mark-read`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // Update UI
+            const alertItem = document.querySelector(`[onclick="markAsRead(${alertId})"]`).closest('.alert-item');
+            alertItem.classList.remove('unread');
+            alertItem.classList.add('read');
+            
+            // Remove the mark read button
+            const markReadBtn = alertItem.querySelector(`[onclick="markAsRead(${alertId})"]`);
+            markReadBtn.remove();
+            
+            // Update unread count
+            updateUnreadCount();
+        } else {
+            alert('Error marking alert as read');
+        }
+    } catch (error) {
+        console.error('Error marking alert as read:', error);
+        alert('Error marking alert as read');
+    }
+}
+
+// Mark all alerts as read
+async function markAllRead() {
+    const unreadAlerts = document.querySelectorAll('.alert-item.unread');
+    
+    for (const alertItem of unreadAlerts) {
+        const markReadBtn = alertItem.querySelector('[onclick^="markAsRead"]');
+        if (markReadBtn) {
+            const alertId = markReadBtn.getAttribute('onclick').match(/\d+/)[0];
+            await markAsRead(parseInt(alertId));
+        }
+    }
+}
+
+// Refresh alerts
+function refreshAlerts() {
+    location.reload();
+}
+
+// Filter alerts
+function filterAlerts() {
+    const severityFilter = document.getElementById('severityFilter').value;
+    const typeFilter = document.getElementById('typeFilter').value;
+    const statusFilter = document.getElementById('statusFilter').value;
+    
+    const alerts = document.querySelectorAll('.alert-item');
+    
+    alerts.forEach(alert => {
+        let show = true;
+        
+        if (severityFilter && alert.dataset.severity !== severityFilter) {
+            show = false;
+        }
+        
+        if (typeFilter && alert.dataset.type !== typeFilter) {
+            show = false;
+        }
+        
+        if (statusFilter) {
+            if (statusFilter === 'read' && !alert.classList.contains('read')) {
+                show = false;
+            }
+            if (statusFilter === 'unread' && !alert.classList.contains('unread')) {
+                show = false;
+            }
+        }
+        
+        alert.style.display = show ? 'flex' : 'none';
+    });
+    
+    // Update visible count
+    updateVisibleCount();
+}
+
+// Update unread count
+function updateUnreadCount() {
+    const unreadCount = document.querySelectorAll('.alert-item.unread').length;
+    const unreadElement = document.querySelector('.summary-card:nth-child(2) .count');
+    if (unreadElement) {
+        unreadElement.textContent = unreadCount;
+    }
+}
+
+// Update visible count
+function updateVisibleCount() {
+    const visibleAlerts = document.querySelectorAll('.alert-item[style*="flex"], .alert-item:not([style*="none"])').length;
+    console.log(`Showing ${visibleAlerts} alerts`);
+}
+
+// View medicine details
+function viewMedicine(medicineId) {
+    window.location.href = `/medicines#medicine-${medicineId}`;
+}
+
+// Load page (for pagination)
+function loadPage(page) {
+    // This would typically make an AJAX request to load more alerts
+    console.log(`Loading page ${page}`);
+}
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+    updateUnreadCount();
+    updateVisibleCount();
+});
+</script>
+{% endblock %}

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ title or 'MediTrack' }}</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/normalize/8.0.1/normalize.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}" />
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' ry='12' fill='%230b1220'/%3E%3Cpath d='M28 12h8v16h16v8H36v16h-8V36H12v-8h16z' fill='%2322c55e'/%3E%3C/svg%3E" />
+    <script>
+        (function(){
+            try{
+                const saved = localStorage.getItem('theme');
+                const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                const theme = saved || (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+            }catch(e){}
+        })();
+    </script>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="brand">MediTrack</div>
+        <ul class="nav-links">
+            {% if current_user.is_authenticated %}
+            <li><a href="{{ url_for('main.dashboard') }}">Dashboard</a></li>
+            <li><a href="{{ url_for('main.medicines') }}">Medicines</a></li>
+            <li><a href="{{ url_for('main.add_medicine') }}">Add</a></li>
+            <li><a href="{{ url_for('main.search') }}">Search</a></li>
+            <li><a href="{{ url_for('main.analytics') }}">Analytics</a></li>
+            <li><a href="{{ url_for('main.reports') }}">Reports</a></li>
+            <li><a href="{{ url_for('main.alerts') }}">Alerts</a></li>
+            <li><a href="{{ url_for('main.profile') }}">Profile</a></li>
+            <li><a href="{{ url_for('auth.logout') }}">Logout</a></li>
+            {% else %}
+            <li><a href="{{ url_for('auth.login') }}">Login</a></li>
+            <li><a href="{{ url_for('auth.register') }}">Register</a></li>
+            {% endif %}
+        </ul>
+        <div class="theme-toggle">
+            <div id="themeToggle" class="toggle" title="Toggle theme" aria-label="Toggle theme"></div>
+        </div>
+    </nav>
+
+    <main class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        <div class="flash-container">
+            {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <script src="{{ url_for('static', filename='scripts.js') }}"></script>
+    <script src="{{ url_for('static', filename='analytics.js') }}"></script>
+</body>
+</html>
+
+

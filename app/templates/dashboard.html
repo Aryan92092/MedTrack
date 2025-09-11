@@ -1,0 +1,205 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Dashboard</h2>
+    
+    <!-- Alerts Section -->
+    {% if alerts %}
+    <div class="alerts-section">
+        <h3>Recent Alerts</h3>
+        <div class="alerts-container">
+            {% for alert in alerts %}
+            <div class="alert alert-{{ alert.severity }}">
+                <div class="alert-content">
+                    <strong>{{ alert.alert_type.replace('_', ' ').title() }}:</strong>
+                    {{ alert.message }}
+                </div>
+                <small class="alert-time">{{ alert.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Enhanced Analytics Cards -->
+    <div class="cards">
+        <div class="card">
+            <div class="card-title">Total Medicines</div>
+            <div class="card-value">{{ total }}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Expired Removed</div>
+            <div class="card-value">{{ cleanup_count }}</div>
+        </div>
+        {% if analytics %}
+        <div class="card">
+            <div class="card-title">Inventory Value</div>
+            <div class="card-value">${{ "%.2f"|format(analytics.insights.total_inventory_value) }}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">Low Stock Items</div>
+            <div class="card-value">{{ analytics.insights.low_stock_count }}</div>
+        </div>
+        <div class="card">
+            <div class="card-title">High Risk Items</div>
+            <div class="card-value">{{ analytics.insights.risk_distribution.high_risk }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Analytics Insights -->
+    {% if analytics %}
+    <div class="analytics-section">
+        <h3>Analytics Insights</h3>
+        <div class="insights-grid">
+            <div class="insight-card">
+                <h4>Consumption Trends</h4>
+                <p>Trend: <span class="trend-{{ analytics.consumption_trends.trend }}">{{ analytics.consumption_trends.trend.title() }}</span></p>
+                <p>Change: {{ analytics.consumption_trends.change_percentage }}%</p>
+            </div>
+            <div class="insight-card">
+                <h4>Stock Analysis</h4>
+                <p>Low Stock: {{ analytics.stock_analysis.low_stock_count }}</p>
+                <p>Overstocked: {{ analytics.stock_analysis.overstocked_count }}</p>
+            </div>
+            <div class="insight-card">
+                <h4>Expiry Risk</h4>
+                <p>Expiring in 7 days: {{ analytics.expiry_analysis.expiring_7_days_count }}</p>
+                <p>At Risk Value: ${{ "%.2f"|format(analytics.expiry_analysis.total_at_risk_value) }}</p>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Smart Recommendations -->
+    {% if analytics and analytics.recommendations %}
+    <div class="recommendations-section">
+        <h3>Smart Recommendations</h3>
+        <div class="recommendations-list">
+            {% for rec in analytics.recommendations[:5] %}
+            <div class="recommendation recommendation-{{ rec.type }}">
+                <div class="rec-content">
+                    <strong>{{ rec.message }}</strong>
+                    {% if rec.action %}
+                    <span class="rec-action">{{ rec.action.replace('_', ' ').title() }}</span>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <h3>Expiring Soon (30 days)</h3>
+    {% if soon %}
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Quantity</th>
+                <th>Expiry</th>
+                <th>Days Left</th>
+                <th>Risk Score</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+        {% for m in soon %}
+            <tr class="warn">
+                <td>{{ m.name }}</td>
+                <td>{{ m.quantity }}</td>
+                <td>{{ m.expiry_date.strftime('%Y-%m-%d') }}</td>
+                <td>{{ m.days_until_expiry() }}</td>
+                <td>
+                    <span class="risk-score risk-{{ 'high' if m.calculate_risk_score() > 0.7 else 'medium' if m.calculate_risk_score() > 0.4 else 'low' }}">
+                        {{ "%.2f"|format(m.calculate_risk_score()) }}
+                    </span>
+                </td>
+                <td>
+                    <button class="btn btn-sm" onclick="consumeMedicine({{ m.id }})">Consume</button>
+                </td>
+            </tr>
+        {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <p>No medicines expiring soon.</p>
+    {% endif %}
+</section>
+
+<!-- Consumption Modal -->
+<div id="consumeModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>Record Consumption</h3>
+        <form id="consumeForm">
+            <input type="hidden" id="medicineId" name="medicine_id">
+            <div class="form-group">
+                <label for="quantity">Quantity to Consume:</label>
+                <input type="number" id="quantity" name="quantity" min="1" required>
+            </div>
+            <div class="form-group">
+                <label for="notes">Notes (optional):</label>
+                <textarea id="notes" name="notes" rows="3"></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Record Consumption</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function consumeMedicine(medicineId) {
+    document.getElementById('medicineId').value = medicineId;
+    document.getElementById('consumeModal').style.display = 'block';
+}
+
+// Modal functionality
+const modal = document.getElementById('consumeModal');
+const closeBtn = document.querySelector('.close');
+
+closeBtn.onclick = function() {
+    modal.style.display = 'none';
+}
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+}
+
+// Handle consumption form submission
+document.getElementById('consumeForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const data = {
+        medicine_id: parseInt(formData.get('medicine_id')),
+        quantity: parseInt(formData.get('quantity')),
+        notes: formData.get('notes')
+    };
+    
+    try {
+        const response = await fetch(`/medicines/${data.medicine_id}/consume`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            alert(result.message);
+            location.reload();
+        } else {
+            alert('Error: ' + result.error);
+        }
+    } catch (error) {
+        alert('Error recording consumption: ' + error.message);
+    }
+});
+</script>
+{% endblock %}
+
+

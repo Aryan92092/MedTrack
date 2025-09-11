@@ -1,0 +1,357 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Reports & Analytics</h2>
+    
+    <!-- Report Generation Section -->
+    <div class="reports-section">
+        <h3>Generate Reports</h3>
+        <div class="report-cards">
+            <div class="report-card">
+                <h4>Inventory Summary</h4>
+                <p>Complete overview of your inventory status</p>
+                <button class="btn btn-primary" onclick="generateInventoryReport()">Generate</button>
+            </div>
+            
+            <div class="report-card">
+                <h4>Consumption Analysis</h4>
+                <p>Detailed analysis of medicine consumption patterns</p>
+                <button class="btn btn-primary" onclick="generateConsumptionReport()">Generate</button>
+            </div>
+            
+            <div class="report-card">
+                <h4>Expiry Risk Report</h4>
+                <p>Analysis of medicines at risk of expiring</p>
+                <button class="btn btn-primary" onclick="generateExpiryReport()">Generate</button>
+            </div>
+            
+            <div class="report-card">
+                <h4>Financial Report</h4>
+                <p>Inventory value and financial analysis</p>
+                <button class="btn btn-primary" onclick="generateFinancialReport()">Generate</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Export Section -->
+    <div class="export-section">
+        <h3>Export Data</h3>
+        <div class="export-options">
+            <div class="export-card">
+                <h4>CSV Export</h4>
+                <p>Export inventory data as CSV file</p>
+                <div class="export-controls">
+                    <select id="exportFormat">
+                        <option value="all">All Data</option>
+                        <option value="medicines">Medicines Only</option>
+                        <option value="consumption">Consumption Records</option>
+                        <option value="alerts">Alerts</option>
+                    </select>
+                    <button class="btn btn-secondary" onclick="exportToCSV()">Export CSV</button>
+                </div>
+            </div>
+            
+            <div class="export-card">
+                <h4>JSON Export</h4>
+                <p>Export data in JSON format for API integration</p>
+                <button class="btn btn-secondary" onclick="exportToJSON()">Export JSON</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analytics Summary -->
+    <div class="analytics-summary">
+        <h3>Analytics Summary</h3>
+        <div class="summary-grid">
+            <div class="summary-item">
+                <h4>Inventory Overview</h4>
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="stat-label">Total Items:</span>
+                        <span class="stat-value">{{ analytics.insights.total_medicines }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Total Value:</span>
+                        <span class="stat-value">${{ "%.2f"|format(analytics.insights.total_inventory_value) }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Categories:</span>
+                        <span class="stat-value">{{ analytics.insights.categories|length }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <h4>Risk Analysis</h4>
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="stat-label">High Risk:</span>
+                        <span class="stat-value risk-high">{{ analytics.insights.risk_distribution.high_risk }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Medium Risk:</span>
+                        <span class="stat-value risk-medium">{{ analytics.insights.risk_distribution.medium_risk }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Low Risk:</span>
+                        <span class="stat-value risk-low">{{ analytics.insights.risk_distribution.low_risk }}</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="summary-item">
+                <h4>Stock Levels</h4>
+                <div class="summary-stats">
+                    <div class="stat">
+                        <span class="stat-label">Low Stock:</span>
+                        <span class="stat-value stock-low">{{ analytics.insights.low_stock_count }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Overstocked:</span>
+                        <span class="stat-value stock-high">{{ analytics.insights.overstocked_count }}</span>
+                    </div>
+                    <div class="stat">
+                        <span class="stat-label">Expiring Soon:</span>
+                        <span class="stat-value expiry-warning">{{ analytics.insights.expiring_soon_count }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Analysis -->
+    <div class="category-analysis">
+        <h3>Category Analysis</h3>
+        <div class="category-grid">
+            {% for category, count in analytics.insights.categories.items() %}
+            <div class="category-item">
+                <div class="category-name">{{ category }}</div>
+                <div class="category-count">{{ count }} items</div>
+                <div class="category-bar">
+                    <div class="category-fill" style="width: {{ (count / analytics.insights.total_medicines * 100) }}%"></div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Report History -->
+    <div class="report-history">
+        <h3>Recent Reports</h3>
+        <div class="history-list">
+            <div class="history-item">
+                <div class="history-info">
+                    <h4>Inventory Summary</h4>
+                    <p>Generated on {{ analytics.generated_at[:10] if analytics.generated_at else 'N/A' }}</p>
+                </div>
+                <div class="history-actions">
+                    <button class="btn btn-sm btn-secondary">Download</button>
+                    <button class="btn btn-sm btn-primary">View</button>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Report Generation Modal -->
+<div id="reportModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3 id="reportModalTitle">Generating Report</h3>
+        <div id="reportModalContent">
+            <div class="loading-spinner"></div>
+            <p>Please wait while we generate your report...</p>
+        </div>
+    </div>
+</div>
+
+<script>
+// Report generation functions
+function generateInventoryReport() {
+    showReportModal('Inventory Summary Report', 'Generating comprehensive inventory summary...');
+    
+    // Simulate report generation
+    setTimeout(() => {
+        const reportData = {
+            title: 'Inventory Summary Report',
+            generated_at: new Date().toISOString(),
+            data: {
+                total_medicines: {{ analytics.insights.total_medicines }},
+                total_value: {{ analytics.insights.total_inventory_value }},
+                categories: {{ analytics.insights.categories | tojson }},
+                risk_distribution: {{ analytics.insights.risk_distribution | tojson }}
+            }
+        };
+        
+        displayReport(reportData);
+    }, 2000);
+}
+
+function generateConsumptionReport() {
+    showReportModal('Consumption Analysis Report', 'Analyzing consumption patterns...');
+    
+    setTimeout(() => {
+        const reportData = {
+            title: 'Consumption Analysis Report',
+            generated_at: new Date().toISOString(),
+            data: {
+                total_consumption: {{ consumption.total_consumption if consumption else 0 }},
+                daily_average: {{ consumption.daily_average if consumption else 0 }},
+                trends: {{ consumption.daily_trends if consumption else {} | tojson }}
+            }
+        };
+        
+        displayReport(reportData);
+    }, 2000);
+}
+
+function generateExpiryReport() {
+    showReportModal('Expiry Risk Report', 'Analyzing expiry risks...');
+    
+    setTimeout(() => {
+        const reportData = {
+            title: 'Expiry Risk Report',
+            generated_at: new Date().toISOString(),
+            data: {
+                expired_count: {{ analytics.insights.expired_count }},
+                expiring_soon_count: {{ analytics.insights.expiring_soon_count }},
+                at_risk_value: {{ analytics.expiry_analysis.total_at_risk_value if analytics.expiry_analysis else 0 }}
+            }
+        };
+        
+        displayReport(reportData);
+    }, 2000);
+}
+
+function generateFinancialReport() {
+    showReportModal('Financial Report', 'Calculating financial metrics...');
+    
+    setTimeout(() => {
+        const reportData = {
+            title: 'Financial Report',
+            generated_at: new Date().toISOString(),
+            data: {
+                total_inventory_value: {{ analytics.insights.total_inventory_value }},
+                low_stock_value: {{ analytics.stock_analysis.low_stock_value if analytics.stock_analysis else 0 }},
+                overstocked_value: {{ analytics.stock_analysis.overstocked_value if analytics.stock_analysis else 0 }},
+                at_risk_value: {{ analytics.expiry_analysis.total_at_risk_value if analytics.expiry_analysis else 0 }}
+            }
+        };
+        
+        displayReport(reportData);
+    }, 2000);
+}
+
+// Export functions
+async function exportToCSV() {
+    const format = document.getElementById('exportFormat').value;
+    
+    try {
+        const response = await fetch('/reports/api/export');
+        const data = await response.json();
+        
+        // Filter data based on format
+        let filteredData = data;
+        if (format === 'medicines') {
+            filteredData = data.filter(item => item.Name); // Only medicine records
+        }
+        
+        const csv = convertToCSV(filteredData);
+        downloadCSV(csv, `inventory_export_${format}_${new Date().toISOString().split('T')[0]}.csv`);
+    } catch (error) {
+        console.error('Error exporting data:', error);
+        alert('Error exporting data');
+    }
+}
+
+function exportToJSON() {
+    const data = {
+        analytics: {{ analytics | tojson }},
+        consumption: {{ consumption | tojson if consumption else '{}' }},
+        exported_at: new Date().toISOString()
+    };
+    
+    const json = JSON.stringify(data, null, 2);
+    downloadJSON(json, `inventory_export_${new Date().toISOString().split('T')[0]}.json`);
+}
+
+// Utility functions
+function showReportModal(title, message) {
+    document.getElementById('reportModalTitle').textContent = title;
+    document.getElementById('reportModalContent').innerHTML = `
+        <div class="loading-spinner"></div>
+        <p>${message}</p>
+    `;
+    document.getElementById('reportModal').style.display = 'block';
+}
+
+function displayReport(reportData) {
+    document.getElementById('reportModalContent').innerHTML = `
+        <div class="report-preview">
+            <h4>${reportData.title}</h4>
+            <p>Generated: ${new Date(reportData.generated_at).toLocaleString()}</p>
+            <div class="report-data">
+                <pre>${JSON.stringify(reportData.data, null, 2)}</pre>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-primary" onclick="downloadReport('${reportData.title}')">Download PDF</button>
+                <button class="btn btn-secondary" onclick="closeReportModal()">Close</button>
+            </div>
+        </div>
+    `;
+}
+
+function downloadReport(title) {
+    // This would typically generate and download a PDF
+    alert(`Downloading ${title} as PDF... (Feature coming soon!)`);
+}
+
+function closeReportModal() {
+    document.getElementById('reportModal').style.display = 'none';
+}
+
+function convertToCSV(data) {
+    if (data.length === 0) return '';
+    
+    const headers = Object.keys(data[0]);
+    const csvContent = [
+        headers.join(','),
+        ...data.map(row => headers.map(header => `"${row[header]}"`).join(','))
+    ].join('\n');
+    
+    return csvContent;
+}
+
+function downloadCSV(csv, filename) {
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+function downloadJSON(json, filename) {
+    const blob = new Blob([json], { type: 'application/json' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    window.URL.revokeObjectURL(url);
+}
+
+// Modal functionality
+const modal = document.getElementById('reportModal');
+const closeBtn = document.querySelector('.close');
+
+closeBtn.onclick = closeReportModal;
+
+window.onclick = function(event) {
+    if (event.target == modal) {
+        closeReportModal();
+    }
+}
+</script>
+{% endblock %}

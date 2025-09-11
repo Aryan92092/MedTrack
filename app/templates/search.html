@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Search Medicine</h2>
+    <form method="get" class="search-bar">
+        <input type="text" name="q" value="{{ q }}" placeholder="Search by exact name..." />
+        <button type="submit" class="btn">Search</button>
+    </form>
+
+    {% if q %}
+        <h3>Results for "{{ q }}"</h3>
+        {% if results %}
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Quantity</th>
+                    <th>Expiry</th>
+                </tr>
+            </thead>
+            <tbody>
+            {% for m in results %}
+                <tr>
+                    <td>{{ m.name }}</td>
+                    <td>{{ m.quantity }}</td>
+                    <td>{{ m.expiry_date.strftime('%Y-%m-%d') }}</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+            <p>No matches found.</p>
+        {% endif %}
+    {% endif %}
+</section>
+{% endblock %}
+
+

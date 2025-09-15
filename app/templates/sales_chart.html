@@ -1,0 +1,229 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Medicine Sales Chart</h2>
+    
+    <div class="chart-section">
+        <div class="chart-container">
+            <h3>Monthly Medicine Sales (Last 12 Months)</h3>
+            <canvas id="salesChart" width="800" height="400"></canvas>
+        </div>
+        
+        <div class="chart-info">
+            <h4>Chart Information</h4>
+            <p>This chart shows the total quantity of medicines consumed each month over the last 12 months.</p>
+            <ul>
+                <li><strong>Blue bars:</strong> Total quantity consumed per month</li>
+                <li><strong>Data source:</strong> Consumption records from your inventory</li>
+                <li><strong>Period:</strong> Last 12 months from today</li>
+            </ul>
+        </div>
+    </div>
+    
+    <div class="stats-section">
+        <div class="stats-grid">
+            <div class="stat-card">
+                <h4>Total This Year</h4>
+                <div class="stat-value" id="totalYear">{{ chart_data.quantities | sum }}</div>
+                <div class="stat-label">Units Consumed</div>
+            </div>
+            <div class="stat-card">
+                <h4>Average Monthly</h4>
+                <div class="stat-value" id="avgMonthly">{{ "%.1f"|format(chart_data.quantities | sum / 12) }}</div>
+                <div class="stat-label">Units per Month</div>
+            </div>
+            <div class="stat-card">
+                <h4>Best Month</h4>
+                <div class="stat-value" id="bestMonth">{{ chart_data.quantities | max }}</div>
+                <div class="stat-label">Highest Consumption</div>
+            </div>
+            <div class="stat-card">
+                <h4>Total Transactions</h4>
+                <div class="stat-value" id="totalTransactions">{{ chart_data.transactions | sum }}</div>
+                <div class="stat-label">Consumption Records</div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+// Chart data from server
+const chartData = {{ chart_data | tojson | safe }};
+
+// Initialize chart when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    const ctx = document.getElementById('salesChart').getContext('2d');
+    
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: chartData.labels,
+            datasets: [{
+                label: 'Quantity Consumed',
+                data: chartData.quantities,
+                backgroundColor: 'rgba(54, 162, 235, 0.6)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                borderRadius: 4,
+                borderSkipped: false,
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: true,
+                    text: 'Monthly Medicine Consumption',
+                    font: {
+                        size: 16,
+                        weight: 'bold'
+                    }
+                },
+                legend: {
+                    display: true,
+                    position: 'top'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Quantity Consumed'
+                    },
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.1)'
+                    }
+                },
+                x: {
+                    title: {
+                        display: true,
+                        text: 'Month'
+                    },
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            animation: {
+                duration: 1000,
+                easing: 'easeInOutQuart'
+            }
+        }
+    });
+});
+</script>
+
+<style>
+.chart-section {
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.chart-container {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+}
+
+.chart-container h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.25rem;
+}
+
+.chart-container canvas {
+    max-height: 400px;
+}
+
+.chart-info {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.chart-info h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.chart-info ul {
+    list-style-type: none;
+    padding: 0;
+    margin: 0;
+}
+
+.chart-info li {
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.chart-info li:last-child {
+    border-bottom: none;
+}
+
+.stats-section {
+    margin: 2rem 0;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    border: 1px solid #e9ecef;
+    text-align: center;
+}
+
+.stat-card h4 {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #007bff;
+    margin: 0.5rem 0;
+}
+
+.stat-label {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+    .chart-section {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    }
+    
+    .stat-value {
+        font-size: 1.5rem;
+    }
+}
+</style>
+{% endblock %}

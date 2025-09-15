@@ -4,7 +4,7 @@ from flask import current_app
 from . import db
 from .models import Medicine, User, ConsumptionRecord, InventoryAlert, AnalyticsCache
 from .ds.structures import MinExpiryHeap, NameHashMap, MedicineNode
-from .ds.analytics import InventoryAnalytics, PredictiveAnalytics
+# Analytics removed - using simple sales chart instead
 import pandas as pd
 import numpy as np
 
@@ -114,303 +114,108 @@ def cleanup_expired(user_id: int | None = None) -> int:
     return count
 
 
-# Advanced Data Science Services
-class AdvancedInventoryService:
-    """Advanced inventory management with data science capabilities"""
+# Simple inventory service (analytics removed)
+class SimpleInventoryService:
+    """Simple inventory management service"""
     
     def __init__(self, user_id: int):
         self.user_id = user_id
-        self.analytics = InventoryAnalytics(user_id)
-        self.predictive = PredictiveAnalytics(user_id)
     
     def get_dashboard_analytics(self) -> Dict:
-        """Get comprehensive dashboard analytics"""
-        cache_key = f"dashboard_analytics_{self.user_id}"
-        cached_data = self.analytics.get_cached_analytics(cache_key)
-        
-        if cached_data:
-            return cached_data
-        
-        # Generate fresh analytics
-        insights = self.analytics.generate_inventory_insights()
-        recommendations = self.analytics.generate_recommendations()
-        
-        # Get recent consumption trends
-        consumption_data = self.analytics.get_consumption_data(30)
-        consumption_trends = self._calculate_consumption_trends(consumption_data)
-        
-        # Get stock level analysis
-        stock_analysis = self._analyze_stock_levels()
-        
-        # Get expiry analysis
-        expiry_analysis = self._analyze_expiry_patterns()
-        
-        analytics_data = {
-            'insights': insights,
-            'recommendations': recommendations,
-            'consumption_trends': consumption_trends,
-            'stock_analysis': stock_analysis,
-            'expiry_analysis': expiry_analysis,
-            'generated_at': datetime.utcnow().isoformat()
-        }
-        
-        # Cache the results
-        self.analytics.cache_analytics(cache_key, analytics_data, hours=6)
-        
-        return analytics_data
-    
-    def _calculate_consumption_trends(self, consumption_data: pd.DataFrame) -> Dict:
-        """Calculate consumption trends"""
-        if consumption_data.empty:
-            return {'trend': 'stable', 'change_percentage': 0}
-        
-        # Group by week
-        consumption_data['week'] = pd.to_datetime(consumption_data['consumption_date']).dt.to_period('W')
-        weekly_consumption = consumption_data.groupby('week')['quantity_consumed'].sum()
-        
-        if len(weekly_consumption) < 2:
-            return {'trend': 'stable', 'change_percentage': 0}
-        
-        # Calculate trend
-        recent_weeks = weekly_consumption.tail(4)
-        older_weeks = weekly_consumption.head(-4) if len(weekly_consumption) > 4 else weekly_consumption.head(2)
-        
-        recent_avg = recent_weeks.mean()
-        older_avg = older_weeks.mean()
-        
-        change_percentage = ((recent_avg - older_avg) / older_avg * 100) if older_avg > 0 else 0
-        
-        if change_percentage > 10:
-            trend = 'increasing'
-        elif change_percentage < -10:
-            trend = 'decreasing'
-        else:
-            trend = 'stable'
-        
-        return {
-            'trend': trend,
-            'change_percentage': round(change_percentage, 2),
-            'recent_weekly_average': round(recent_avg, 2),
-            'previous_weekly_average': round(older_avg, 2)
-        }
-    
-    def _analyze_stock_levels(self) -> Dict:
-        """Analyze stock levels and provide insights"""
+        """Get simple dashboard analytics"""
         medicines = Medicine.query.filter(Medicine.user_id == self.user_id).all()
         
         if not medicines:
-            return {}
+            return {
+                'insights': {
+                    'total_inventory_value': 0,
+                    'low_stock_count': 0,
+                    'risk_distribution': {'high_risk': 0, 'medium_risk': 0, 'low_risk': 0},
+                    'categories': {}
+                },
+                'recommendations': [],
+                'consumption_trends': {'trend': 'stable', 'change_percentage': 0},
+                'stock_analysis': {'low_stock_count': 0, 'overstocked_count': 0},
+                'expiry_analysis': {'expiring_7_days_count': 0, 'total_at_risk_value': 0.0}
+            }
         
+        # Basic statistics
+        total_medicines = len(medicines)
+        expired_medicines = [m for m in medicines if m.is_expired()]
+        expiring_soon = [m for m in medicines if 0 < m.days_until_expiry() <= 30]
         low_stock = [m for m in medicines if m.is_low_stock()]
         overstocked = [m for m in medicines if m.is_overstocked()]
-        optimal_stock = [m for m in medicines if not m.is_low_stock() and not m.is_overstocked()]
         
-        # Calculate stock value distribution
+        # Calculate total inventory value
         total_value = sum(m.quantity * (m.selling_price or 0) for m in medicines)
-        low_stock_value = sum(m.quantity * (m.selling_price or 0) for m in low_stock)
-        overstocked_value = sum(m.quantity * (m.selling_price or 0) for m in overstocked)
         
-        return {
-            'low_stock_count': len(low_stock),
-            'overstocked_count': len(overstocked),
-            'optimal_stock_count': len(optimal_stock),
-            'total_value': total_value,
-            'low_stock_value': low_stock_value,
-            'overstocked_value': overstocked_value,
-            'low_stock_percentage': (low_stock_value / total_value * 100) if total_value > 0 else 0,
-            'overstocked_percentage': (overstocked_value / total_value * 100) if total_value > 0 else 0
-        }
-    
-    def _analyze_expiry_patterns(self) -> Dict:
-        """Analyze expiry patterns and risks"""
-        medicines = Medicine.query.filter(Medicine.user_id == self.user_id).all()
-        
-        if not medicines:
-            return {}
-        
-        today = date.today()
-        expired = [m for m in medicines if m.is_expired()]
-        expiring_7_days = [m for m in medicines if 0 < m.days_until_expiry() <= 7]
-        expiring_30_days = [m for m in medicines if 7 < m.days_until_expiry() <= 30]
-        expiring_90_days = [m for m in medicines if 30 < m.days_until_expiry() <= 90]
-        
-        # Calculate total value at risk
-        expired_value = sum(m.quantity * (m.selling_price or 0) for m in expired)
-        expiring_7_value = sum(m.quantity * (m.selling_price or 0) for m in expiring_7_days)
-        expiring_30_value = sum(m.quantity * (m.selling_price or 0) for m in expiring_30_days)
-        
-        return {
-            'expired_count': len(expired),
-            'expiring_7_days_count': len(expiring_7_days),
-            'expiring_30_days_count': len(expiring_30_days),
-            'expiring_90_days_count': len(expiring_90_days),
-            'expired_value': expired_value,
-            'expiring_7_value': expiring_7_value,
-            'expiring_30_value': expiring_30_value,
-            'total_at_risk_value': expired_value + expiring_7_value + expiring_30_value
-        }
-    
-    def generate_smart_recommendations(self) -> List[Dict]:
-        """Generate smart recommendations using ML and analytics"""
-        recommendations = []
-        medicines = Medicine.query.filter(Medicine.user_id == self.user_id).all()
-        
-        # Get consumption rates
-        consumption_rates = self.analytics.calculate_consumption_rates()
-        
+        # Category distribution
+        categories = {}
         for med in medicines:
-            consumption_rate = consumption_rates.get(med.id, 0)
-            
-            # Smart reorder recommendations
-            if consumption_rate > 0 and not med.is_expired():
-                days_until_stockout = med.quantity / consumption_rate if consumption_rate > 0 else float('inf')
-                
-                if days_until_stockout <= 7:
-                    recommendations.append({
-                        'type': 'urgent_reorder',
-                        'medicine_id': med.id,
-                        'medicine_name': med.name,
-                        'message': f'{med.name} will run out in {days_until_stockout:.1f} days',
-                        'priority': 'high',
-                        'action': 'reorder_immediately',
-                        'suggested_quantity': max(med.min_stock_level, int(consumption_rate * 30))
-                    })
-                elif days_until_stockout <= 14:
-                    recommendations.append({
-                        'type': 'reorder',
-                        'medicine_id': med.id,
-                        'medicine_name': med.name,
-                        'message': f'{med.name} will run out in {days_until_stockout:.1f} days',
-                        'priority': 'medium',
-                        'action': 'reorder_soon',
-                        'suggested_quantity': max(med.min_stock_level, int(consumption_rate * 30))
-                    })
-            
-            # Expiry optimization
-            if med.days_until_expiry() <= 30 and not med.is_expired():
-                if consumption_rate > 0:
-                    days_to_consume = med.quantity / consumption_rate
-                    if days_to_consume > med.days_until_expiry():
-                        recommendations.append({
-                            'type': 'expiry_risk',
-                            'medicine_id': med.id,
-                            'medicine_name': med.name,
-                            'message': f'{med.name} may expire before being fully consumed',
-                            'priority': 'high',
-                            'action': 'promote_usage',
-                            'days_until_expiry': med.days_until_expiry()
-                        })
-            
-            # Overstock optimization
-            if med.is_overstocked() and consumption_rate > 0:
-                months_of_stock = med.quantity / (consumption_rate * 30)
-                if months_of_stock > 6:
-                    recommendations.append({
-                        'type': 'overstock',
-                        'medicine_id': med.id,
-                        'medicine_name': med.name,
-                        'message': f'{med.name} has {months_of_stock:.1f} months of stock',
-                        'priority': 'low',
-                        'action': 'reduce_stock',
-                        'suggested_quantity': int(consumption_rate * 90)  # 3 months supply
-                    })
+            cat = med.category or 'Uncategorized'
+            categories[cat] = categories.get(cat, 0) + 1
         
-        return sorted(recommendations, key=lambda x: ['urgent_reorder', 'expiry_risk', 'reorder', 'overstock'].index(x['type']))
+        # Risk analysis
+        high_risk = [m for m in medicines if m.calculate_risk_score() > 0.7]
+        medium_risk = [m for m in medicines if 0.4 < m.calculate_risk_score() <= 0.7]
+        low_risk = [m for m in medicines if m.calculate_risk_score() <= 0.4]
+        
+        return {
+            'insights': {
+                'total_medicines': total_medicines,
+                'expired_count': len(expired_medicines),
+                'expiring_soon_count': len(expiring_soon),
+                'low_stock_count': len(low_stock),
+                'overstocked_count': len(overstocked),
+                'total_inventory_value': total_value,
+                'categories': categories,
+                'risk_distribution': {
+                    'high_risk': len(high_risk),
+                    'medium_risk': len(medium_risk),
+                    'low_risk': len(low_risk)
+                }
+            },
+            'recommendations': [],
+            'consumption_trends': {'trend': 'stable', 'change_percentage': 0},
+            'stock_analysis': {
+                'low_stock_count': len(low_stock),
+                'overstocked_count': len(overstocked),
+                'optimal_stock_count': total_medicines - len(low_stock) - len(overstocked)
+            },
+            'expiry_analysis': {
+                'expiring_7_days_count': len([m for m in medicines if 0 < m.days_until_expiry() <= 7]),
+                'total_at_risk_value': sum(m.quantity * (m.selling_price or 0) for m in expiring_soon)
+            }
+        }
     
     def create_consumption_record(self, medicine_id: int, quantity: int, notes: str = None) -> ConsumptionRecord:
-        """Create consumption record and update analytics"""
-        return self.analytics.create_consumption_record(medicine_id, quantity, notes)
-    
-    def get_consumption_analytics(self, days: int = 30) -> Dict:
-        """Get detailed consumption analytics"""
-        consumption_data = self.analytics.get_consumption_data(days)
+        """Create consumption record"""
+        record = ConsumptionRecord(
+            medicine_id=medicine_id,
+            user_id=self.user_id,
+            quantity_consumed=quantity,
+            consumption_date=date.today(),
+            notes=notes
+        )
+        db.session.add(record)
         
-        if consumption_data.empty:
-            return {'total_consumption': 0, 'daily_average': 0, 'trends': {}}
+        # Update medicine quantity
+        medicine = Medicine.query.get(medicine_id)
+        if medicine and medicine.user_id == self.user_id:
+            medicine.quantity = max(0, medicine.quantity - quantity)
+            medicine.last_consumption_date = date.today()
         
-        # Calculate metrics
-        total_consumption = consumption_data['quantity_consumed'].sum()
-        daily_average = total_consumption / days
-        
-        # Top consumed medicines
-        top_medicines = consumption_data.groupby('medicine_id')['quantity_consumed'].sum().nlargest(10)
-        
-        # Daily trends
-        daily_trends = consumption_data.groupby('consumption_date')['quantity_consumed'].sum()
-        
-        return {
-            'total_consumption': int(total_consumption),
-            'daily_average': round(daily_average, 2),
-            'top_medicines': top_medicines.to_dict(),
-            'daily_trends': daily_trends.to_dict(),
-            'period_days': days
-        }
-    
-    def generate_alerts(self) -> List[InventoryAlert]:
-        """Generate system alerts based on analytics"""
-        alerts = []
-        medicines = Medicine.query.filter(Medicine.user_id == self.user_id).all()
-        
-        for med in medicines:
-            # Expired medicines
-            if med.is_expired():
-                alert = InventoryAlert(
-                    user_id=self.user_id,
-                    medicine_id=med.id,
-                    alert_type='expired',
-                    message=f'{med.name} has expired and should be removed',
-                    severity='critical'
-                )
-                alerts.append(alert)
-            
-            # Low stock alerts
-            elif med.is_low_stock():
-                alert = InventoryAlert(
-                    user_id=self.user_id,
-                    medicine_id=med.id,
-                    alert_type='low_stock',
-                    message=f'{med.name} is running low (quantity: {med.quantity})',
-                    severity='high'
-                )
-                alerts.append(alert)
-            
-            # Expiring soon alerts
-            elif med.days_until_expiry() <= 7:
-                alert = InventoryAlert(
-                    user_id=self.user_id,
-                    medicine_id=med.id,
-                    alert_type='expiring_soon',
-                    message=f'{med.name} expires in {med.days_until_expiry()} days',
-                    severity='high'
-                )
-                alerts.append(alert)
-            
-            # High risk alerts
-            elif med.calculate_risk_score() > 0.8:
-                alert = InventoryAlert(
-                    user_id=self.user_id,
-                    medicine_id=med.id,
-                    alert_type='high_risk',
-                    message=f'{med.name} has high risk score ({med.calculate_risk_score():.2f})',
-                    severity='medium'
-                )
-                alerts.append(alert)
-        
-        # Save alerts to database
-        for alert in alerts:
-            db.session.add(alert)
         db.session.commit()
-        
-        return alerts
+        return record
 
 
 # Global service instances
-advanced_services = {}  # user_id -> AdvancedInventoryService
+simple_services = {}  # user_id -> SimpleInventoryService
 
-def get_advanced_service(user_id: int) -> AdvancedInventoryService:
-    """Get or create advanced service for user"""
-    if user_id not in advanced_services:
-        advanced_services[user_id] = AdvancedInventoryService(user_id)
-    return advanced_services[user_id]
+def get_advanced_service(user_id: int) -> SimpleInventoryService:
+    """Get or create simple service for user"""
+    if user_id not in simple_services:
+        simple_services[user_id] = SimpleInventoryService(user_id)
+    return simple_services[user_id]
 
 

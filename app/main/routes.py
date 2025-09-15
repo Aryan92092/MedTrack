@@ -7,6 +7,8 @@ from ..services import inventory_index, cleanup_expired, get_advanced_service
 from ..ds.ml_models import MLModelManager
 from sqlalchemy import or_
 import json
+import pandas as pd
+import io
 from types import SimpleNamespace
 
 
@@ -215,33 +217,77 @@ def search():
 
 
 # Advanced Analytics Routes
-@main_bp.route('/analytics')
+@main_bp.route('/sales-chart')
 @login_required
-def analytics():
-    """Advanced analytics dashboard"""
+def sales_chart():
+    """Simple sales chart showing medicine sales by month"""
     user_id = int(current_user.get_id())
-    advanced_service = get_advanced_service(user_id)
     
-    # Get comprehensive analytics
-    analytics_data = advanced_service.get_dashboard_analytics()
-    if not isinstance(analytics_data, dict):
-        analytics_data = _to_plain_dict(analytics_data)
-    analytics_data = _ensure_analytics_defaults(analytics_data)
+    # Get consumption data for the last 12 months
+    from datetime import datetime, timedelta
+    from sqlalchemy import func, extract
     
-    # Get consumption analytics
-    consumption_analytics = advanced_service.get_consumption_analytics(30)
+    # Calculate date range for last 12 months
+    end_date = datetime.now().date()
+    start_date = end_date - timedelta(days=365)
     
-    return render_template('analytics.html', 
-                         analytics=analytics_data,
-                         consumption=consumption_analytics)
+    # Query consumption data grouped by month
+    monthly_sales = db.session.query(
+        extract('year', ConsumptionRecord.consumption_date).label('year'),
+        extract('month', ConsumptionRecord.consumption_date).label('month'),
+        func.sum(ConsumptionRecord.quantity_consumed).label('total_quantity'),
+        func.count(ConsumptionRecord.id).label('total_transactions')
+    ).join(Medicine).filter(
+        ConsumptionRecord.user_id == user_id,
+        ConsumptionRecord.consumption_date >= start_date,
+        ConsumptionRecord.consumption_date <= end_date
+    ).group_by(
+        extract('year', ConsumptionRecord.consumption_date),
+        extract('month', ConsumptionRecord.consumption_date)
+    ).order_by('year', 'month').all()
+    
+    # Format data for chart
+    chart_data = {
+        'labels': [],
+        'quantities': [],
+        'transactions': []
+    }
+    
+    # Create month labels and data
+    current_date = start_date.replace(day=1)
+    while current_date <= end_date:
+        month_label = current_date.strftime('%b %Y')
+        chart_data['labels'].append(month_label)
+        
+        # Find data for this month
+        month_data = next(
+            (row for row in monthly_sales 
+             if row.year == current_date.year and row.month == current_date.month), 
+            None
+        )
+        
+        if month_data:
+            chart_data['quantities'].append(int(month_data.total_quantity))
+            chart_data['transactions'].append(int(month_data.total_transactions))
+        else:
+            chart_data['quantities'].append(0)
+            chart_data['transactions'].append(0)
+        
+        # Move to next month
+        if current_date.month == 12:
+            current_date = current_date.replace(year=current_date.year + 1, month=1)
+        else:
+            current_date = current_date.replace(month=current_date.month + 1)
+    
+    return render_template('sales_chart.html', chart_data=chart_data)
 
 
-@main_bp.route('/analytics/api/consumption', methods=['POST'])
+# Simple consumption recording for sales chart
+@main_bp.route('/api/record-consumption', methods=['POST'])
 @login_required
 def record_consumption():
-    """Record medicine consumption"""
+    """Record medicine consumption for sales tracking"""
     user_id = int(current_user.get_id())
-    advanced_service = get_advanced_service(user_id)
     
     data = request.get_json()
     medicine_id = data.get('medicine_id')
@@ -252,60 +298,40 @@ def record_consumption():
         return jsonify({'error': 'Invalid data'}), 400
     
     try:
-        record = advanced_service.create_consumption_record(medicine_id, quantity, notes)
+        # Check if medicine belongs to user
+        medicine = Medicine.query.filter(
+            Medicine.id == medicine_id,
+            Medicine.user_id == user_id
+        ).first()
+        
+        if not medicine:
+            return jsonify({'error': 'Medicine not found'}), 404
+        
+        # Create consumption record
+        record = ConsumptionRecord(
+            medicine_id=medicine_id,
+            user_id=user_id,
+            quantity_consumed=quantity,
+            consumption_date=date.today(),
+            notes=notes
+        )
+        
+        # Update medicine quantity
+        medicine.quantity = max(0, medicine.quantity - quantity)
+        medicine.last_consumption_date = date.today()
+        
+        db.session.add(record)
+        db.session.commit()
+        
         return jsonify({
             'success': True,
             'record_id': record.id,
-            'message': 'Consumption recorded successfully'
+            'remaining_quantity': medicine.quantity,
+            'message': f'Consumed {quantity} units of {medicine.name}'
         })
     except Exception as e:
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
-
-
-@main_bp.route('/analytics/api/recommendations')
-@login_required
-def get_recommendations():
-    """Get smart recommendations"""
-    user_id = int(current_user.get_id())
-    advanced_service = get_advanced_service(user_id)
-    
-    recommendations = advanced_service.generate_smart_recommendations()
-    return jsonify(recommendations)
-
-
-@main_bp.route('/analytics/api/abc-analysis')
-@login_required
-def abc_analysis():
-    """Get ABC analysis results"""
-    user_id = int(current_user.get_id())
-    advanced_service = get_advanced_service(user_id)
-    
-    abc_data = advanced_service.analytics.calculate_abc_analysis()
-    return jsonify(abc_data)
-
-
-@main_bp.route('/analytics/api/xyz-analysis')
-@login_required
-def xyz_analysis():
-    """Get XYZ analysis results"""
-    user_id = int(current_user.get_id())
-    advanced_service = get_advanced_service(user_id)
-    
-    xyz_data = advanced_service.analytics.calculate_xyz_analysis()
-    return jsonify(xyz_data)
-
-
-@main_bp.route('/analytics/api/consumption-trends')
-@login_required
-def consumption_trends():
-    """Get consumption trends data"""
-    user_id = int(current_user.get_id())
-    days = request.args.get('days', 30, type=int)
-    
-    advanced_service = get_advanced_service(user_id)
-    consumption_data = advanced_service.get_consumption_analytics(days)
-    
-    return jsonify(consumption_data)
 
 
 @main_bp.route('/alerts')
@@ -518,5 +544,148 @@ def get_clusters():
         })
     except Exception as e:
         return jsonify({'error': str(e)}), 500
+
+
+@main_bp.route('/upload-csv', methods=['GET', 'POST'])
+@login_required
+def upload_csv():
+    """Handle CSV file upload for medicine data"""
+    if request.method == 'GET':
+        return render_template('upload_csv.html')
+    
+    user_id = int(current_user.get_id())
+    
+    # Check if file was uploaded
+    if 'csv_file' not in request.files:
+        flash('No file selected', 'danger')
+        return redirect(url_for('main.upload_csv'))
+    
+    file = request.files['csv_file']
+    
+    if file.filename == '':
+        flash('No file selected', 'danger')
+        return redirect(url_for('main.upload_csv'))
+    
+    if not file.filename.lower().endswith('.csv'):
+        flash('Please upload a CSV file', 'danger')
+        return redirect(url_for('main.upload_csv'))
+    
+    try:
+        # Read CSV file
+        csv_data = file.read().decode('utf-8')
+        df = pd.read_csv(io.StringIO(csv_data))
+        
+        # Validate required columns
+        required_columns = ['name', 'quantity', 'expiry_date']
+        missing_columns = [col for col in required_columns if col not in df.columns]
+        
+        if missing_columns:
+            flash(f'Missing required columns: {", ".join(missing_columns)}', 'danger')
+            return redirect(url_for('main.upload_csv'))
+        
+        # Process each row
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for index, row in df.iterrows():
+            try:
+                # Extract data from row
+                name = str(row['name']).strip()
+                quantity = int(row['quantity'])
+                expiry_str = str(row['expiry_date']).strip()
+                
+                # Optional fields with defaults
+                category = str(row.get('category', '')).strip() or None
+                manufacturer = str(row.get('manufacturer', '')).strip() or None
+                batch_number = str(row.get('batch_number', '')).strip() or None
+                purchase_price = float(row.get('purchase_price', 0)) or None
+                selling_price = float(row.get('selling_price', 0)) or None
+                min_stock_level = int(row.get('min_stock_level', 10))
+                max_stock_level = int(row.get('max_stock_level', 1000))
+                
+                # Validate data
+                if not name or quantity <= 0:
+                    errors.append(f'Row {index + 1}: Invalid name or quantity')
+                    error_count += 1
+                    continue
+                
+                # Parse expiry date
+                try:
+                    expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').date()
+                except ValueError:
+                    try:
+                        expiry_date = datetime.strptime(expiry_str, '%d/%m/%Y').date()
+                    except ValueError:
+                        try:
+                            expiry_date = datetime.strptime(expiry_str, '%m/%d/%Y').date()
+                        except ValueError:
+                            errors.append(f'Row {index + 1}: Invalid date format for {expiry_str}')
+                            error_count += 1
+                            continue
+                
+                # Check if medicine already exists
+                existing = Medicine.query.filter(
+                    Medicine.name == name,
+                    Medicine.user_id == user_id
+                ).first()
+                
+                if existing:
+                    # Update existing medicine
+                    existing.quantity += quantity
+                    existing.category = category or existing.category
+                    existing.manufacturer = manufacturer or existing.manufacturer
+                    existing.batch_number = batch_number or existing.batch_number
+                    existing.purchase_price = purchase_price or existing.purchase_price
+                    existing.selling_price = selling_price or existing.selling_price
+                    existing.min_stock_level = min_stock_level
+                    existing.max_stock_level = max_stock_level
+                    existing.risk_score = existing.calculate_risk_score()
+                    inventory_index.update_medicine(existing)
+                else:
+                    # Create new medicine
+                    medicine = Medicine(
+                        name=name,
+                        quantity=quantity,
+                        expiry_date=expiry_date,
+                        user_id=user_id,
+                        category=category,
+                        manufacturer=manufacturer,
+                        batch_number=batch_number,
+                        purchase_price=purchase_price,
+                        selling_price=selling_price,
+                        min_stock_level=min_stock_level,
+                        max_stock_level=max_stock_level
+                    )
+                    medicine.risk_score = medicine.calculate_risk_score()
+                    db.session.add(medicine)
+                    inventory_index.add_medicine(medicine)
+                
+                success_count += 1
+                
+            except Exception as e:
+                errors.append(f'Row {index + 1}: {str(e)}')
+                error_count += 1
+        
+        # Commit all changes
+        db.session.commit()
+        
+        # Show results
+        if success_count > 0:
+            flash(f'Successfully processed {success_count} medicines', 'success')
+        
+        if error_count > 0:
+            error_msg = f'Failed to process {error_count} medicines. '
+            if errors:
+                error_msg += f'Errors: {"; ".join(errors[:5])}'
+                if len(errors) > 5:
+                    error_msg += f'... and {len(errors) - 5} more errors'
+            flash(error_msg, 'warning')
+        
+        return redirect(url_for('main.medicines'))
+        
+    except Exception as e:
+        flash(f'Error processing CSV file: {str(e)}', 'danger')
+        return redirect(url_for('main.upload_csv'))
 
 

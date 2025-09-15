@@ -1,0 +1,214 @@
+{% extends 'base.html' %}
+{% block content %}
+<section>
+    <h2>Upload CSV Dataset</h2>
+    
+    <div class="upload-section">
+        <div class="upload-info">
+            <h3>CSV Upload Instructions</h3>
+            <p>Upload a CSV file containing medicine data. The file should include the following columns:</p>
+            
+            <div class="csv-format">
+                <h4>Required Columns:</h4>
+                <ul>
+                    <li><strong>name</strong> - Medicine name (required)</li>
+                    <li><strong>quantity</strong> - Quantity in stock (required)</li>
+                    <li><strong>expiry_date</strong> - Expiry date in YYYY-MM-DD format (required)</li>
+                </ul>
+                
+                <h4>Optional Columns:</h4>
+                <ul>
+                    <li><strong>category</strong> - Medicine category</li>
+                    <li><strong>manufacturer</strong> - Manufacturer name</li>
+                    <li><strong>batch_number</strong> - Batch number</li>
+                    <li><strong>purchase_price</strong> - Purchase price per unit</li>
+                    <li><strong>selling_price</strong> - Selling price per unit</li>
+                    <li><strong>min_stock_level</strong> - Minimum stock level (default: 10)</li>
+                    <li><strong>max_stock_level</strong> - Maximum stock level (default: 1000)</li>
+                </ul>
+            </div>
+            
+            <div class="csv-example">
+                <h4>Example CSV Format:</h4>
+                <pre>
+name,quantity,expiry_date,category,manufacturer,purchase_price,selling_price
+Paracetamol,100,2024-12-31,Analgesic,ABC Pharma,0.50,1.00
+Aspirin,50,2024-11-15,Analgesic,XYZ Corp,0.75,1.50
+Vitamin C,200,2025-06-30,Vitamin,Health Plus,0.25,0.75
+                </pre>
+            </div>
+        </div>
+        
+        <div class="upload-form">
+            <form method="POST" enctype="multipart/form-data">
+                <div class="form-group">
+                    <label for="csv_file">Select CSV File:</label>
+                    <input type="file" id="csv_file" name="csv_file" accept=".csv" required class="form-control">
+                </div>
+                
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-primary">Upload CSV</button>
+                    <a href="{{ url_for('main.medicines') }}" class="btn btn-secondary">Cancel</a>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <div class="upload-tips">
+        <h3>Upload Tips:</h3>
+        <ul>
+            <li>Make sure your CSV file is properly formatted with headers</li>
+            <li>Date formats supported: YYYY-MM-DD, DD/MM/YYYY, MM/DD/YYYY</li>
+            <li>If a medicine with the same name already exists, quantities will be added together</li>
+            <li>Empty optional fields will use default values</li>
+            <li>Maximum file size: 10MB</li>
+        </ul>
+    </div>
+</section>
+
+<style>
+.upload-section {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin: 2rem 0;
+}
+
+.upload-info {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+}
+
+.upload-form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border: 1px solid #e9ecef;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.csv-format ul {
+    list-style-type: none;
+    padding-left: 0;
+}
+
+.csv-format li {
+    padding: 0.25rem 0;
+    border-bottom: 1px solid #eee;
+}
+
+.csv-format li:last-child {
+    border-bottom: none;
+}
+
+.csv-example {
+    margin-top: 1rem;
+    background: #f1f3f4;
+    padding: 1rem;
+    border-radius: 4px;
+    border-left: 4px solid #007bff;
+}
+
+.csv-example pre {
+    margin: 0;
+    font-family: 'Courier New', monospace;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.upload-tips {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #e7f3ff;
+    border-radius: 8px;
+    border-left: 4px solid #007bff;
+}
+
+.upload-tips ul {
+    margin: 0.5rem 0 0 0;
+    padding-left: 1.5rem;
+}
+
+.upload-tips li {
+    margin: 0.5rem 0;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
+    transition: all 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+@media (max-width: 768px) {
+    .upload-section {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

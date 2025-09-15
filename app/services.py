@@ -4,7 +4,6 @@ from flask import current_app
 from . import db
 from .models import Medicine, User, ConsumptionRecord, InventoryAlert, AnalyticsCache
 from .ds.structures import MinExpiryHeap, NameHashMap, MedicineNode
-# Analytics removed - using simple sales chart instead
 
 
 class InventoryIndex:
@@ -104,7 +103,24 @@ def cleanup_expired(user_id: int | None = None) -> int:
     expired = query.all()
     count = 0
     for med in expired:
-        inventory_index.remove_medicine(med)
+        # Remove from in-memory index
+        try:
+            inventory_index.remove_medicine(med)
+        except Exception:
+            pass
+
+        # Delete dependent consumption records and alerts explicitly to avoid
+        # SQLAlchemy attempting to set FK to NULL on delete (which fails when
+        # the FK is NOT NULL in SQLite). Use bulk delete for efficiency.
+        try:
+            db.session.query(ConsumptionRecord).filter(ConsumptionRecord.medicine_id == med.id).delete(synchronize_session=False)
+        except Exception:
+            pass
+        try:
+            db.session.query(InventoryAlert).filter(InventoryAlert.medicine_id == med.id).delete(synchronize_session=False)
+        except Exception:
+            pass
+
         db.session.delete(med)
         count += 1
     if count:

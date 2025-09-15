@@ -7,7 +7,6 @@ from ..services import inventory_index, cleanup_expired, get_advanced_service
 from ..ds.ml_models import MLModelManager
 from sqlalchemy import or_
 import json
-import pandas as pd
 import io
 from types import SimpleNamespace
 
@@ -572,6 +571,8 @@ def upload_csv():
     
     try:
         # Read CSV file
+        import pandas as pd  # local import to avoid module-level dependency issues
+
         csv_data = file.read().decode('utf-8')
         df = pd.read_csv(io.StringIO(csv_data))
         
@@ -631,7 +632,7 @@ def upload_csv():
                 ).first()
                 
                 if existing:
-                    # Update existing medicine
+                    # Update existing medicine (persist first, rebuild index later)
                     existing.quantity += quantity
                     existing.category = category or existing.category
                     existing.manufacturer = manufacturer or existing.manufacturer
@@ -641,7 +642,6 @@ def upload_csv():
                     existing.min_stock_level = min_stock_level
                     existing.max_stock_level = max_stock_level
                     existing.risk_score = existing.calculate_risk_score()
-                    inventory_index.update_medicine(existing)
                 else:
                     # Create new medicine
                     medicine = Medicine(
@@ -659,7 +659,6 @@ def upload_csv():
                     )
                     medicine.risk_score = medicine.calculate_risk_score()
                     db.session.add(medicine)
-                    inventory_index.add_medicine(medicine)
                 
                 success_count += 1
                 
@@ -667,8 +666,15 @@ def upload_csv():
                 errors.append(f'Row {index + 1}: {str(e)}')
                 error_count += 1
         
-        # Commit all changes
+        # Commit all changes first so new medicines have IDs
         db.session.commit()
+
+        # Rebuild inventory index for this user so uploaded/updated medicines are available
+        try:
+            inventory_index.rebuild(user_id=user_id)
+        except Exception:
+            # Non-fatal - index rebuild should not break the upload flow
+            pass
         
         # Show results
         if success_count > 0:

@@ -5,8 +5,6 @@ from . import db
 from .models import Medicine, User, ConsumptionRecord, InventoryAlert, AnalyticsCache
 from .ds.structures import MinExpiryHeap, NameHashMap, MedicineNode
 # Analytics removed - using simple sales chart instead
-import pandas as pd
-import numpy as np
 
 
 class InventoryIndex:
@@ -207,6 +205,52 @@ class SimpleInventoryService:
         
         db.session.commit()
         return record
+
+    def generate_alerts(self) -> None:
+        """Generate inventory alerts for the user and persist them.
+
+        This creates alerts for expired items, items expiring soon (7 days),
+        low stock, and overstocked items. It avoids creating duplicate active
+        alerts by checking for existing unread alerts of the same type.
+        """
+        meds = Medicine.query.filter(Medicine.user_id == self.user_id).all()
+        for med in meds:
+            now_alerts = []
+            # Determine alert types applicable
+            if med.is_expired():
+                now_alerts.append(('expired', f'{med.name} has expired'))
+            elif 0 < med.days_until_expiry() <= 7:
+                now_alerts.append(('expiring_soon', f'{med.name} is expiring soon'))
+
+            if med.is_low_stock():
+                now_alerts.append(('low_stock', f'{med.name} is low on stock'))
+
+            if med.is_overstocked():
+                now_alerts.append(('overstocked', f'{med.name} appears overstocked'))
+
+            for alert_type, message in now_alerts:
+                exists = (
+                    InventoryAlert.query.filter(
+                        InventoryAlert.user_id == self.user_id,
+                        InventoryAlert.medicine_id == med.id,
+                        InventoryAlert.alert_type == alert_type,
+                        InventoryAlert.is_read == False,
+                    ).first()
+                    is not None
+                )
+                if not exists:
+                    a = InventoryAlert(
+                        user_id=self.user_id,
+                        medicine_id=med.id,
+                        alert_type=alert_type,
+                        message=message,
+                        severity='high' if alert_type in ('expired', 'low_stock') else 'medium',
+                    )
+                    db.session.add(a)
+        try:
+            db.session.commit()
+        except Exception:
+            db.session.rollback()
 
 
 # Global service instances

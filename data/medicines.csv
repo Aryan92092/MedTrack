@@ -1,31 +1,46 @@
-name,quantity,expiry_date
-Paracetamol 500mg,100,2025-09-04
-Ibuprofen 200mg,80,2025-09-05
-Amoxicillin 250mg,60,2025-09-11
-Cough Syrup Honey,40,2025-09-18
-Cetirizine 10mg,150,2025-09-25
-Vitamin C 500mg,200,2025-10-01
-Azithromycin 500mg,70,2025-09-06
-Metformin 500mg,180,2025-12-01
-Atorvastatin 10mg,120,2025-11-15
-Losartan 50mg,90,2025-10-20
-Omeprazole 20mg,110,2025-09-07
-Pantoprazole 40mg,95,2025-09-08
-Dextromethorphan Syrup,55,2025-09-09
-Levocetirizine 5mg,130,2025-09-10
-ORS Pack,300,2025-09-12
-Calcium + D3,140,2025-10-10
-Zinc 50mg,160,2025-10-15
-Insulin 10ml,50,2025-09-04
-Ranitidine 150mg,85,2025-09-13
-Clopidogrel 75mg,75,2025-09-14
-Amlodipine 5mg,125,2025-09-16
-Montelukast 10mg,115,2025-09-20
-Salbutamol Inhaler,45,2025-09-22
-Betadine Ointment,35,2025-09-28
-Diclofenac Gel,60,2025-10-05
-Dolo 650,210,2025-09-04
-Crepe Bandage,80,2026-01-01
-Multivitamin Syrup,65,2025-09-26
-Loratadine 10mg,100,2025-09-24
-Amoxiclav 625mg,70,2025-09-17
+name,quantity,expiry_date,purchase_price,selling_price,category,manufacturer,batch_number,min_stock_level,max_stock_level
+Paracetamol 500mg,100,10-01-2026,0.8,1.5,Analgesic,HealthCorp,PCM-500-001,10,500
+Ibuprofen 200mg,80,15-12-2025,0.7,1.4,Analgesic,PharmaPlus,IBU-200-002,10,400
+Amoxicillin 250mg,60,20-11-2025,1.2,2.5,Antibiotic,MediLabs,AMX-250-003,5,300
+Cough Syrup Honey,40,30-10-2025,2,3.5,Cough & Cold,SweetMeds,CSH-100-004,5,200
+Cetirizine 10mg,150,05-02-2026,0.25,0.8,Antihistamine,AllerFree,CET-010-005,20,600
+Vitamin C 500mg,200,15-03-2026,0.15,0.6,Vitamins,VitaWorks,VC-500-006,30,800
+Azithromycin 500mg,70,01-12-2025,1.8,3.8,Antibiotic,MediLabs,AZI-500-007,5,300
+Metformin 500mg,180,01-06-2026,0.22,0.9,Antidiabetic,Glucare,MTF-500-008,20,700
+Atorvastatin 10mg,120,20-04-2026,0.3,1.1,Cardiac,HeartWell,ATV-010-009,15,600
+Losartan 50mg,90,25-02-2026,0.35,1.2,Cardiac,HeartWell,LOS-050-010,10,500
+Omeprazole 20mg,110,10-12-2025,0.28,0.95,GI,StomachEase,OMP-020-011,15,500
+Pantoprazole 40mg,95,18-01-2026,0.32,1.1,GI,StomachEase,PNT-040-012,10,500
+Dextromethorphan Syrup,55,22-10-2025,1.1,2.2,Cough & Cold,SweetMeds,DXM-120-013,5,250
+Levocetirizine 5mg,130,05-01-2026,0.2,0.75,Antihistamine,AllerFree,LCT-005-014,20,600
+ORS Pack,300,01-05-2026,0.1,0.3,Electrolytes,HydraLife,ORS-001-015,50,1000
+Calcium + D3,140,20-03-2026,0.4,1.2,Supplement,BoneCare,CAD3-016-016,20,700
+Zinc 50mg,160,25-03-2026,0.18,0.7,Supplement,BoneCare,ZNC-050-017,20,700
+Insulin 10ml,50,05-12-2025,3.5,6,Antidiabetic,Glucare,INS-010-018,5,200
+Ranitidine 150mg,85,30-11-2025,0.26,0.9,GI,StomachEase,RNT-150-019,10,400
+Clopidogrel 75mg,75,12-01-2026,0.65,1.8,Cardiac,HeartWell,CLP-075-020,10,300
+Amlodipine 5mg,125,10-02-2026,0.22,0.85,Cardiac,HeartWell,AML-005-021,15,600
+Montelukast 10mg,115,28-01-2026,0.55,1.5,Respiratory,BreathEZ,MNT-010-022,10,500
+Salbutamol Inhaler,45,22-12-2025,2.2,4,Respiratory,BreathEZ,SBT-100-023,5,200
+Betadine Ointment,35,18-11-2025,0.9,1.8,Topical,DermaCare,BET-020-024,5,150
+Diclofenac Gel,60,12-12-2025,0.75,1.6,Topical,DermaCare,DCF-030-025,10,300
+Dolo 650,210,08-01-2026,0.35,0.95,Analgesic,HealthCorp,DOL-650-026,30,900
+Crepe Bandage,80,01-07-2026,0.5,1.2,First Aid,FlexiMed,CRP-070-027,10,400
+Multivitamin Syrup,65,26-11-2025,1.2,2.5,Vitamins,VitaWorks,MVS-150-028,10,300
+Loratadine 10mg,100,22-01-2026,0.24,0.8,Antihistamine,AllerFree,LOR-010-029,15,500
+Amoxiclav 625mg,70,14-12-2025,2.1,4.2,Antibiotic,MediLabs,AMC-625-030,5,250
+Guaifenesin Syrup,50,10-11-2025,1,2.1,Cough & Cold,SweetMeds,GUI-100-031,5,200
+Fexofenadine 120mg,85,15-02-2026,0.6,1.5,Antihistamine,AllerFree,FEX-120-032,10,400
+Hydroxyzine 25mg,90,05-03-2026,0.4,1.1,Antihistamine,AllerFree,HYD-025-033,10,400
+Naproxen 250mg,70,25-01-2026,0.55,1.4,Analgesic,PharmaPlus,NAP-250-034,10,300
+Aspirin 75mg,150,10-04-2026,0.15,0.5,Cardiac,HeartWell,ASP-075-035,20,800
+Gliclazide 80mg,95,18-05-2026,0.45,1.2,Antidiabetic,Glucare,GLI-080-036,10,500
+Glimipride 2mg,100,22-05-2026,0.38,1.05,Antidiabetic,Glucare,GLM-002-037,10,500
+Esomeprazole 40mg,120,12-03-2026,0.36,1.15,GI,StomachEase,ESO-040-038,15,600
+Dapagliflozin 10mg,60,18-02-2026,1.9,3.8,Antidiabetic,Glucare,DAP-010-039,5,250
+Fluticasone Nasal Spray,55,30-01-2026,2.4,4.5,Respiratory,BreathEZ,FLU-050-040,5,250
+Budesonide Inhaler,40,28-12-2025,3.2,6.2,Respiratory,BreathEZ,BUD-100-041,5,200
+Metronidazole 400mg,110,12-02-2026,0.28,0.95,Antibiotic,MediLabs,MTZ-400-042,10,500
+Ciprofloxacin 500mg,90,08-03-2026,0.48,1.4,Antibiotic,MediLabs,CIP-500-043,10,400
+Levofloxacin 500mg,85,20-03-2026,0.52,1.55,Antibiotic,MediLabs,LEV-500-044,10,400
+Doxycycline 100mg,100,17-01-2026,0.4,1.2,Antibiotic,MediLabs,DOX-100-045,10,500

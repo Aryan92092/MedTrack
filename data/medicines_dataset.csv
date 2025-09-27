@@ -1,0 +1,24 @@
+name,quantity,expiry_date,category,manufacturer,batch_number,purchase_price,selling_price,min_stock_level,max_stock_level
+Paracetamol,200,10-05-2026,Analgesic,Cipla,BATCH001,5,10,10,1000
+Amoxicillin,150,15-11-2025,Antibiotic,Sun Pharma,BATCH002,12,20,10,1000
+Cetirizine,300,20-01-2027,Antihistamine,Dr. Reddy's,BATCH003,2,5,10,1000
+Metformin,400,01-07-2026,Antidiabetic,Zydus,BATCH004,8,15,10,1000
+Ibuprofen,250,12-09-2026,NSAID,Lupin,BATCH005,6,12,10,1000
+Azithromycin,100,05-12-2025,Antibiotic,Torrent Pharma,BATCH006,15,25,10,1000
+Omeprazole,350,18-03-2027,Antacid,Glenmark,BATCH007,4,8,10,1000
+Vitamin C,500,01-01-2028,Supplement,Alkem,BATCH008,1.5,3,10,1000
+Amlodipine,180,25-10-2026,Antihypertensive,Cipla,BATCH009,7,14,10,1000
+Doxycycline,120,30-08-2025,Antibiotic,Sun Pharma,BATCH010,10,18,10,1000
+Insulin 10ml,50,04-09-2025,,,,10,20,10,1000
+Ranitidine 150mg,85,13-09-2025,,,,5,10,10,1000
+Clopidogrel 75mg,75,14-09-2025,,,,50,60,10,1000
+Amlodipine 5mg,125,16-09-2025,,,,,,,
+Montelukast 10mg,115,20-09-2025,,,,,,,
+Salbutamol Inhaler,45,22-09-2025,,,,,,,
+Betadine Ointment,35,28-09-2025,,,,,,,
+Diclofenac Gel,60,05-10-2025,,,,,,,
+Dolo 650,210,04-09-2025,,,,,,,
+Crepe Bandage,80,01-01-2026,,,,,,,
+Multivitamin Syrup,65,26-09-2025,,,,,,,
+Loratadine 10mg,100,24-09-2025,,,,,,,
+Amoxiclav 625mg,70,17-09-2025,,,,,,,

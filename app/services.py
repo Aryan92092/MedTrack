@@ -109,9 +109,7 @@ def cleanup_expired(user_id: int | None = None) -> int:
         except Exception:
             pass
 
-        # Delete dependent consumption records and alerts explicitly to avoid
-        # SQLAlchemy attempting to set FK to NULL on delete (which fails when
-        # the FK is NOT NULL in SQLite). Use bulk delete for efficiency.
+    
         try:
             db.session.query(ConsumptionRecord).filter(ConsumptionRecord.medicine_id == med.id).delete(synchronize_session=False)
         except Exception:

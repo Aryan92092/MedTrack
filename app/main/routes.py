@@ -112,23 +112,6 @@ def dashboard():
                          alerts=recent_alerts)
 
 
-@main_bp.route('/profile', methods=['GET', 'POST'])
-@login_required
-def profile():
-    user: User = User.query.get_or_404(int(current_user.get_id()))
-    if request.method == 'POST':
-        user.full_name = request.form.get('full_name', '').strip() or None
-        user.email = request.form.get('email', '').strip() or None
-        user.phone = request.form.get('phone', '').strip() or None
-        # Handle profile picture URL input for simplicity (file uploads can be added)
-        pic = request.form.get('profile_pic', '').strip()
-        user.profile_pic = pic or user.profile_pic
-        db.session.commit()
-        flash('Profile updated', 'success')
-        return redirect(url_for('main.profile'))
-    return render_template('profile.html', user=user)
-
-
 @main_bp.route('/medicines')
 @login_required
 def medicines():
@@ -349,6 +332,23 @@ def alerts():
     ).order_by(InventoryAlert.created_at.desc()).all()
     
     return render_template('alerts.html', alerts=all_alerts)
+
+
+@main_bp.route('/alerts/mark-all', methods=['POST'])
+@login_required
+def mark_all_alerts():
+    """Mark all unread alerts as read for the current user."""
+    user_id = int(current_user.get_id())
+    try:
+        updated = InventoryAlert.query.filter(
+            InventoryAlert.user_id == user_id,
+            InventoryAlert.is_read == False
+        ).update({InventoryAlert.is_read: True}, synchronize_session=False)
+        db.session.commit()
+        return jsonify({'success': True, 'updated': int(updated)})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @main_bp.route('/alerts/<int:alert_id>/mark-read', methods=['POST'])
@@ -611,19 +611,25 @@ def upload_csv():
                     error_count += 1
                     continue
                 
-                # Parse expiry date
-                try:
-                    expiry_date = datetime.strptime(expiry_str, '%Y-%m-%d').date()
-                except ValueError:
+                # Parse expiry date (support common formats with '-' or '/')
+                parsed = None
+                for fmt in (
+                    '%Y-%m-%d',  # 2025-12-31
+                    '%d-%m-%Y',  # 31-12-2025
+                    '%m-%d-%Y',  # 12-31-2025
+                    '%d/%m/%Y',  # 31/12/2025
+                    '%m/%d/%Y',  # 12/31/2025
+                ):
                     try:
-                        expiry_date = datetime.strptime(expiry_str, '%d/%m/%Y').date()
+                        parsed = datetime.strptime(expiry_str, fmt).date()
+                        break
                     except ValueError:
-                        try:
-                            expiry_date = datetime.strptime(expiry_str, '%m/%d/%Y').date()
-                        except ValueError:
-                            errors.append(f'Row {index + 1}: Invalid date format for {expiry_str}')
-                            error_count += 1
-                            continue
+                        continue
+                if not parsed:
+                    errors.append(f'Row {index + 1}: Invalid date format for {expiry_str}')
+                    error_count += 1
+                    continue
+                expiry_date = parsed
                 
                 # Check if medicine already exists
                 existing = Medicine.query.filter(

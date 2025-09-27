@@ -99,12 +99,12 @@
                 
                 <div class="alert-actions">
                     {% if not alert.is_read %}
-                    <button class="btn btn-sm btn-primary" onclick="markAsRead({{ alert.id }})">
+                    <button class="btn btn-sm btn-primary mark-read-btn" data-alert-id="{{ alert.id }}">
                         Mark Read
                     </button>
                     {% endif %}
                     {% if alert.medicine %}
-                    <button class="btn btn-sm btn-secondary" onclick="viewMedicine({{ alert.medicine.id }})">
+                    <button class="btn btn-sm btn-secondary view-medicine-btn" data-medicine-id="{{ alert.medicine.id }}">
                         View Medicine
                     </button>
                     {% endif %}
@@ -171,14 +171,25 @@ async function markAsRead(alertId) {
 
 // Mark all alerts as read
 async function markAllRead() {
-    const unreadAlerts = document.querySelectorAll('.alert-item.unread');
-    
-    for (const alertItem of unreadAlerts) {
-        const markReadBtn = alertItem.querySelector('[onclick^="markAsRead"]');
-        if (markReadBtn) {
-            const alertId = markReadBtn.getAttribute('onclick').match(/\d+/)[0];
-            await markAsRead(parseInt(alertId));
+    try {
+        const res = await fetch('/alerts/mark-all', { method: 'POST' });
+        const data = await res.json();
+        if (data.success) {
+            // update UI state
+            document.querySelectorAll('.alert-item.unread').forEach(it => {
+                it.classList.remove('unread');
+                it.classList.add('read');
+                const btn = it.querySelector('[onclick^="markAsRead"]');
+                if (btn) btn.remove();
+            });
+            updateUnreadCount();
+            alert(`Marked ${data.updated} alerts as read`);
+        } else {
+            alert('Failed to mark all as read')
         }
+    } catch (e) {
+        console.error(e);
+        alert('Error while marking all read')
     }
 }
 
@@ -242,6 +253,25 @@ function viewMedicine(medicineId) {
     window.location.href = `/medicines#medicine-${medicineId}`;
 }
 
+// Attach event listeners for dynamic buttons
+function attachAlertButtons() {
+    document.querySelectorAll('.mark-read-btn').forEach(btn => {
+        btn.addEventListener('click', async function () {
+            const id = this.dataset.alertId;
+            if (!id) return;
+            await markAsRead(parseInt(id));
+        });
+    });
+
+    document.querySelectorAll('.view-medicine-btn').forEach(btn => {
+        btn.addEventListener('click', function () {
+            const mid = this.dataset.medicineId;
+            if (!mid) return;
+            viewMedicine(parseInt(mid));
+        });
+    });
+}
+
 // Load page (for pagination)
 function loadPage(page) {
     // This would typically make an AJAX request to load more alerts
@@ -252,6 +282,7 @@ function loadPage(page) {
 document.addEventListener('DOMContentLoaded', function() {
     updateUnreadCount();
     updateVisibleCount();
+    attachAlertButtons();
 });
 </script>
 {% endblock %}

@@ -10,25 +10,37 @@
             <div class="report-card">
                 <h4>Inventory Summary</h4>
                 <p>Complete overview of your inventory status</p>
-                <button class="btn btn-primary" onclick="generateInventoryReport()">Generate</button>
+                <div class="form-actions">
+                    <button class="btn primary" onclick="generateInventoryReport()">Generate</button>
+                    <a class="btn secondary" href="{{ url_for('main.api_inventory_summary_pdf') }}">Download PDF</a>
+                </div>
             </div>
             
             <div class="report-card">
                 <h4>Consumption Analysis</h4>
                 <p>Detailed analysis of medicine consumption patterns</p>
-                <button class="btn btn-primary" onclick="generateConsumptionReport()">Generate</button>
+                <div class="form-actions">
+                    <button class="btn primary" onclick="generateConsumptionReport()">Generate</button>
+                    <a class="btn secondary" href="{{ url_for('main.api_consumption_analysis_pdf') }}">Download PDF</a>
+                </div>
             </div>
             
             <div class="report-card">
                 <h4>Expiry Risk Report</h4>
                 <p>Analysis of medicines at risk of expiring</p>
-                <button class="btn btn-primary" onclick="generateExpiryReport()">Generate</button>
+                <div class="form-actions">
+                    <button class="btn primary" onclick="generateExpiryReport()">Generate</button>
+                    <a class="btn secondary" href="{{ url_for('main.api_expiry_risk_pdf') }}">Download PDF</a>
+                </div>
             </div>
             
             <div class="report-card">
                 <h4>Financial Report</h4>
                 <p>Inventory value and financial analysis</p>
-                <button class="btn btn-primary" onclick="generateFinancialReport()">Generate</button>
+                <div class="form-actions">
+                    <button class="btn primary" onclick="generateFinancialReport()">Generate</button>
+                    <a class="btn secondary" href="{{ url_for('main.api_financial_pdf') }}">Download PDF</a>
+                </div>
             </div>
         </div>
     </div>
@@ -167,79 +179,52 @@
 
 <script>
 // Report generation functions
-function generateInventoryReport() {
+async function generateInventoryReport() {
     showReportModal('Inventory Summary Report', 'Generating comprehensive inventory summary...');
-    
-    // Simulate report generation
-    setTimeout(() => {
-        const reportData = {
-            title: 'Inventory Summary Report',
-            generated_at: new Date().toISOString(),
-            data: {
-                total_medicines: {{ analytics.insights.total_medicines }},
-                total_value: {{ analytics.insights.total_inventory_value }},
-                categories: {{ analytics.insights.categories | tojson }},
-                risk_distribution: {{ analytics.insights.risk_distribution | tojson }}
-            }
-        };
-        
-        displayReport(reportData);
-    }, 2000);
+    try {
+        const res = await fetch('/reports/api/inventory-summary');
+        const data = await res.json();
+        displayReport({ title: 'Inventory Summary Report', generated_at: data.generated_at, data });
+    } catch (e) {
+        alert('Failed to generate report');
+        closeReportModal();
+    }
 }
 
-function generateConsumptionReport() {
+async function generateConsumptionReport() {
     showReportModal('Consumption Analysis Report', 'Analyzing consumption patterns...');
-    
-    setTimeout(() => {
-        const reportData = {
-            title: 'Consumption Analysis Report',
-            generated_at: new Date().toISOString(),
-            data: {
-                total_consumption: {{ consumption.total_consumption if consumption else 0 }},
-                daily_average: {{ consumption.daily_average if consumption else 0 }},
-                trends: {{ consumption.daily_trends if consumption else {} | tojson }}
-            }
-        };
-        
-        displayReport(reportData);
-    }, 2000);
+    try {
+        const res = await fetch('/reports/api/consumption-analysis');
+        const data = await res.json();
+        displayReport({ title: 'Consumption Analysis Report', generated_at: data.generated_at, data });
+    } catch (e) {
+        alert('Failed to generate report');
+        closeReportModal();
+    }
 }
 
-function generateExpiryReport() {
+async function generateExpiryReport() {
     showReportModal('Expiry Risk Report', 'Analyzing expiry risks...');
-    
-    setTimeout(() => {
-        const reportData = {
-            title: 'Expiry Risk Report',
-            generated_at: new Date().toISOString(),
-            data: {
-                expired_count: {{ analytics.insights.expired_count }},
-                expiring_soon_count: {{ analytics.insights.expiring_soon_count }},
-                at_risk_value: {{ analytics.expiry_analysis.total_at_risk_value if analytics.expiry_analysis else 0 }}
-            }
-        };
-        
-        displayReport(reportData);
-    }, 2000);
+    try {
+        const res = await fetch('/reports/api/expiry-risk');
+        const data = await res.json();
+        displayReport({ title: 'Expiry Risk Report', generated_at: data.generated_at, data });
+    } catch (e) {
+        alert('Failed to generate report');
+        closeReportModal();
+    }
 }
 
-function generateFinancialReport() {
+async function generateFinancialReport() {
     showReportModal('Financial Report', 'Calculating financial metrics...');
-    
-    setTimeout(() => {
-        const reportData = {
-            title: 'Financial Report',
-            generated_at: new Date().toISOString(),
-            data: {
-                total_inventory_value: {{ analytics.insights.total_inventory_value }},
-                low_stock_value: {{ analytics.stock_analysis.low_stock_value if analytics.stock_analysis else 0 }},
-                overstocked_value: {{ analytics.stock_analysis.overstocked_value if analytics.stock_analysis else 0 }},
-                at_risk_value: {{ analytics.expiry_analysis.total_at_risk_value if analytics.expiry_analysis else 0 }}
-            }
-        };
-        
-        displayReport(reportData);
-    }, 2000);
+    try {
+        const res = await fetch('/reports/api/financial');
+        const data = await res.json();
+        displayReport({ title: 'Financial Report', generated_at: data.generated_at, data });
+    } catch (e) {
+        alert('Failed to generate report');
+        closeReportModal();
+    }
 }
 
 // Export functions

@@ -7,12 +7,25 @@
             <input type="text" name="username" placeholder="Enter username" required />
         </label>
         <label>Password
-            <input type="password" name="password" placeholder="Enter password" required />
+            <div style="position:relative;display:grid;gap:6px;">
+                <input id="loginPassword" type="password" name="password" placeholder="Enter password" required minlength="8" />
+                <small style="color:#9ca3af;">Minimum 8 characters</small>
+                <button type="button" class="btn secondary" style="position:absolute;right:6px;top:6px;padding:6px 10px;font-size:12px;" onclick="togglePw('loginPassword', this)">Show</button>
+            </div>
         </label>
         <button type="submit" class="btn primary">Login</button>
     </form>
     <p style="margin-top:10px;color:#9ca3af;">No account? <a href="{{ url_for('auth.register') }}">Register</a></p>
 </section>
+<script>
+function togglePw(id, btn){
+  const el=document.getElementById(id);
+  if(!el) return;
+  const is=el.getAttribute('type')==='password';
+  el.setAttribute('type', is?'text':'password');
+  if(btn) btn.textContent=is?'Hide':'Show';
+}
+</script>
 {% endblock %}
 
 

@@ -1,11 +1,12 @@
-from datetime import datetime, date
-from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify
+from datetime import datetime, date, timedelta
+from flask import Blueprint, render_template, redirect, url_for, request, flash, jsonify, send_file
 from flask_login import login_required, current_user
 from ..models import Medicine, User, ConsumptionRecord, InventoryAlert
 from .. import db
 from ..services import inventory_index, cleanup_expired, get_advanced_service
 from ..ds.ml_models import MLModelManager
-from sqlalchemy import or_
+from sqlalchemy import or_, func
+from io import BytesIO
 import json
 import io
 from types import SimpleNamespace
@@ -448,6 +449,220 @@ def export_data():
         })
     
     return jsonify(csv_data)
+
+
+# -------------------------
+# Reports: JSON Endpoints
+# -------------------------
+
+@main_bp.route('/reports/api/inventory-summary')
+@login_required
+def api_inventory_summary():
+    user_id = int(current_user.get_id())
+    from ..models import Medicine
+    meds = Medicine.query.filter(Medicine.user_id == user_id).all()
+    total_medicines = len(meds)
+    expired = sum(1 for m in meds if m.is_expired())
+    expiring_soon = sum(1 for m in meds if 0 < m.days_until_expiry() <= 30)
+    low_stock = sum(1 for m in meds if m.is_low_stock())
+    overstocked = sum(1 for m in meds if m.is_overstocked())
+    total_value = sum(m.quantity * (m.selling_price or 0) for m in meds)
+    categories = {}
+    for m in meds:
+        key = m.category or 'Uncategorized'
+        categories[key] = categories.get(key, 0) + 1
+    data = {
+        'generated_at': datetime.utcnow().isoformat(),
+        'total_medicines': total_medicines,
+        'expired_count': expired,
+        'expiring_soon_count': expiring_soon,
+        'low_stock_count': low_stock,
+        'overstocked_count': overstocked,
+        'total_inventory_value': total_value,
+        'categories': categories,
+    }
+    return jsonify(data)
+
+
+@main_bp.route('/reports/api/consumption-analysis')
+@login_required
+def api_consumption_analysis():
+    user_id = int(current_user.get_id())
+    # Last 30 days trends
+    start_date = date.today() - timedelta(days=29)
+    rows = (
+        db.session.query(
+            ConsumptionRecord.consumption_date,
+            func.sum(ConsumptionRecord.quantity_consumed)
+        )
+        .filter(
+            ConsumptionRecord.user_id == user_id,
+            ConsumptionRecord.consumption_date >= start_date
+        )
+        .group_by(ConsumptionRecord.consumption_date)
+        .order_by(ConsumptionRecord.consumption_date)
+        .all()
+    )
+    trends = {r[0].isoformat(): int(r[1]) for r in rows}
+    total_consumption = int(sum(r[1] for r in rows))
+    days = max(1, (date.today() - start_date).days + 1)
+    daily_average = total_consumption / days
+    data = {
+        'generated_at': datetime.utcnow().isoformat(),
+        'window_days': days,
+        'total_consumption': total_consumption,
+        'daily_average': round(daily_average, 2),
+        'daily_trends': trends,
+    }
+    return jsonify(data)
+
+
+@main_bp.route('/reports/api/expiry-risk')
+@login_required
+def api_expiry_risk():
+    user_id = int(current_user.get_id())
+    meds = Medicine.query.filter(Medicine.user_id == user_id).all()
+    expiring_soon = [m for m in meds if 0 < m.days_until_expiry() <= 30]
+    at_risk_value = sum(m.quantity * (m.selling_price or 0) for m in expiring_soon)
+    data = {
+        'generated_at': datetime.utcnow().isoformat(),
+        'expired_count': len([m for m in meds if m.is_expired()]),
+        'expiring_soon_count': len(expiring_soon),
+        'total_at_risk_value': at_risk_value,
+        'items': [
+            {
+                'id': m.id,
+                'name': m.name,
+                'days_until_expiry': m.days_until_expiry(),
+                'quantity': m.quantity,
+                'value': m.quantity * (m.selling_price or 0),
+            }
+            for m in expiring_soon
+        ],
+    }
+    return jsonify(data)
+
+
+@main_bp.route('/reports/api/financial')
+@login_required
+def api_financial():
+    user_id = int(current_user.get_id())
+    meds = Medicine.query.filter(Medicine.user_id == user_id).all()
+    total_value = sum(m.quantity * (m.selling_price or 0) for m in meds)
+    low_stock = [m for m in meds if m.is_low_stock()]
+    overstocked = [m for m in meds if m.is_overstocked()]
+    low_stock_value = sum(m.quantity * (m.selling_price or 0) for m in low_stock)
+    overstocked_value = sum(m.quantity * (m.selling_price or 0) for m in overstocked)
+    data = {
+        'generated_at': datetime.utcnow().isoformat(),
+        'total_inventory_value': total_value,
+        'low_stock_value': low_stock_value,
+        'overstocked_value': overstocked_value,
+    }
+    return jsonify(data)
+
+
+# -------------------------
+# Reports: PDF Endpoints
+# -------------------------
+
+def _pdf_headers(filename: str) -> dict:
+    return {
+        'Content-Type': 'application/pdf',
+        'Content-Disposition': f'attachment; filename="{filename}"'
+    }
+
+
+def _render_simple_pdf(title: str, lines: list[str]) -> BytesIO:
+    from reportlab.pdfgen import canvas  # type: ignore
+    from reportlab.lib.pagesizes import A4  # type: ignore
+    buffer = BytesIO()
+    c = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    y = height - 50
+    c.setFont("Helvetica-Bold", 16)
+    c.drawString(50, y, title)
+    y -= 20
+    c.setFont("Helvetica", 11)
+    for line in lines:
+        if y < 50:
+            c.showPage()
+            y = height - 50
+            c.setFont("Helvetica", 11)
+        c.drawString(50, y, str(line))
+        y -= 16
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
+@main_bp.route('/reports/api/inventory-summary.pdf')
+@login_required
+def api_inventory_summary_pdf():
+    resp = api_inventory_summary().json
+    lines = [
+        f"Generated: {resp.get('generated_at')}",
+        f"Total Items: {resp.get('total_medicines')}",
+        f"Expired: {resp.get('expired_count')}",
+        f"Expiring Soon: {resp.get('expiring_soon_count')}",
+        f"Low Stock: {resp.get('low_stock_count')}",
+        f"Overstocked: {resp.get('overstocked_count')}",
+        f"Total Inventory Value: {resp.get('total_inventory_value')}",
+        "Categories:",
+    ]
+    for k, v in (resp.get('categories') or {}).items():
+        lines.append(f"  - {k}: {v}")
+    pdf = _render_simple_pdf("Inventory Summary", lines)
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True, download_name='inventory_summary.pdf')
+
+
+@main_bp.route('/reports/api/consumption-analysis.pdf')
+@login_required
+def api_consumption_analysis_pdf():
+    resp = api_consumption_analysis().json
+    lines = [
+        f"Generated: {resp.get('generated_at')}",
+        f"Window Days: {resp.get('window_days')}",
+        f"Total Consumption: {resp.get('total_consumption')}",
+        f"Daily Average: {resp.get('daily_average')}",
+        "Daily Trends:",
+    ]
+    for d, qty in (resp.get('daily_trends') or {}).items():
+        lines.append(f"  - {d}: {qty}")
+    pdf = _render_simple_pdf("Consumption Analysis", lines)
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True, download_name='consumption_analysis.pdf')
+
+
+@main_bp.route('/reports/api/expiry-risk.pdf')
+@login_required
+def api_expiry_risk_pdf():
+    resp = api_expiry_risk().json
+    lines = [
+        f"Generated: {resp.get('generated_at')}",
+        f"Expired: {resp.get('expired_count')}",
+        f"Expiring Soon: {resp.get('expiring_soon_count')}",
+        f"Total At-Risk Value: {resp.get('total_at_risk_value')}",
+        "Items:",
+    ]
+    for it in (resp.get('items') or []):
+        lines.append(f"  - {it.get('name')} (ID {it.get('id')}): {it.get('days_until_expiry')} days, qty {it.get('quantity')}, value {it.get('value')}")
+    pdf = _render_simple_pdf("Expiry Risk", lines)
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True, download_name='expiry_risk.pdf')
+
+
+@main_bp.route('/reports/api/financial.pdf')
+@login_required
+def api_financial_pdf():
+    resp = api_financial().json
+    lines = [
+        f"Generated: {resp.get('generated_at')}",
+        f"Total Inventory Value: {resp.get('total_inventory_value')}",
+        f"Low Stock Value: {resp.get('low_stock_value')}",
+        f"Overstocked Value: {resp.get('overstocked_value')}",
+    ]
+    pdf = _render_simple_pdf("Financial Report", lines)
+    return send_file(pdf, mimetype='application/pdf', as_attachment=True, download_name='financial_report.pdf')
 
 
 # Machine Learning Routes

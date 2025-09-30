@@ -12,6 +12,10 @@ def login():
     if request.method == 'POST':
         username = request.form.get('username', '').strip()
         password = request.form.get('password', '')
+        # Enforce minimum password length for security
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long', 'danger')
+            return render_template('login.html')
         user = User.query.filter_by(username=username).first()
         if not user or not user.check_password(password):
             flash('Invalid credentials', 'danger')
@@ -36,6 +40,9 @@ def register():
         confirm = request.form.get('confirm', '')
         if not username or not password:
             flash('Username and password are required', 'danger')
+            return render_template('register.html')
+        if len(password) < 8:
+            flash('Password must be at least 8 characters long', 'danger')
             return render_template('register.html')
         if password != confirm:
             flash('Passwords do not match', 'danger')

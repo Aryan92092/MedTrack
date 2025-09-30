@@ -20,8 +20,8 @@
         </div>
         
         <div class="alerts-actions">
-            <button class="btn btn-primary" onclick="markAllRead()">Mark All Read</button>
-            <button class="btn btn-secondary" onclick="refreshAlerts()">Refresh</button>
+            <button class="btn primary" onclick="markAllRead()">Mark All Read</button>
+            <button class="btn secondary" onclick="refreshAlerts()">Refresh</button>
         </div>
     </div>
 
@@ -99,12 +99,12 @@
                 
                 <div class="alert-actions">
                     {% if not alert.is_read %}
-                    <button class="btn btn-sm btn-primary mark-read-btn" data-alert-id="{{ alert.id }}">
+                    <button class="btn btn-sm primary mark-read-btn" data-alert-id="{{ alert.id }}">
                         Mark Read
                     </button>
                     {% endif %}
                     {% if alert.medicine %}
-                    <button class="btn btn-sm btn-secondary view-medicine-btn" data-medicine-id="{{ alert.medicine.id }}">
+                    <button class="btn btn-sm secondary view-medicine-btn" data-medicine-id="{{ alert.medicine.id }}">
                         View Medicine
                     </button>
                     {% endif %}

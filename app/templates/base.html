@@ -126,8 +126,12 @@
         </div>
     </footer>
 
+    <!-- AI Assistant Widget -->
+    {% include 'ai_assistant.html' %}
+
     <script src="{{ url_for('static', filename='scripts.js') }}"></script>
     <script src="{{ url_for('static', filename='analytics.js') }}"></script>
+    <script src="{{ url_for('static', filename='ai_assistant.js') }}"></script>
 </body>
 
 </html>

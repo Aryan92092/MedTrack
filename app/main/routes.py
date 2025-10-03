@@ -5,6 +5,7 @@ from ..models import Medicine, User, ConsumptionRecord, InventoryAlert
 from .. import db
 from ..services import inventory_index, cleanup_expired, get_advanced_service
 from ..ds.ml_models import MLModelManager
+from ..assistant import ai_assistant
 from sqlalchemy import or_, func
 from io import BytesIO
 import json
@@ -916,3 +917,124 @@ def upload_csv():
         return redirect(url_for('main.upload_csv'))
 
 
+# AI Assistant Routes
+@main_bp.route('/ai/chat', methods=['POST'])
+@login_required
+def ai_chat():
+    """Handle AI assistant chat messages"""
+    user_id = str(current_user.get_id())
+    
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        
+        if not message:
+            return jsonify({'error': 'Message cannot be empty'}), 400
+        
+        # Generate AI response
+        response = ai_assistant.generate_response(user_id, message)
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@main_bp.route('/ai/chat-with-csv', methods=['POST'])
+@login_required
+def ai_chat_with_csv():
+    """Handle AI assistant chat with CSV analysis"""
+    user_id = str(current_user.get_id())
+    
+    try:
+        data = request.get_json()
+        message = data.get('message', '').strip()
+        csv_content = data.get('csv_content', '')
+        csv_filename = data.get('csv_filename', 'uploaded_file.csv')
+        
+        if not message:
+            return jsonify({'error': 'Message cannot be empty'}), 400
+        
+        # Generate AI response with CSV context
+        response = ai_assistant.generate_response(
+            user_id, 
+            message, 
+            csv_data=csv_content if csv_content else None,
+            csv_filename=csv_filename
+        )
+        
+        return jsonify({
+            'success': True,
+            'response': response,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@main_bp.route('/ai/quick-answers')
+@login_required
+def ai_quick_answers():
+    """Get quick answer templates"""
+    try:
+        quick_answers = ai_assistant.get_quick_answers()
+        return jsonify({
+            'success': True,
+            'quick_answers': quick_answers
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@main_bp.route('/ai/history')
+@login_required
+def ai_chat_history():
+    """Get user's chat history"""
+    user_id = str(current_user.get_id())
+    
+    try:
+        history = ai_assistant.get_user_history(user_id)
+        return jsonify({
+            'success': True,
+            'history': history
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@main_bp.route('/ai/clear-history', methods=['POST'])
+@login_required
+def ai_clear_history():
+    """Clear user's chat history"""
+    user_id = str(current_user.get_id())
+    
+    try:
+        if user_id in ai_assistant.conversation_history:
+            del ai_assistant.conversation_history[user_id]
+        
+        return jsonify({
+            'success': True,
+            'message': 'Chat history cleared'
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500

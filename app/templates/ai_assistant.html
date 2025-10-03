@@ -1,0 +1,123 @@
+<!-- AI Assistant Chat Widget -->
+<div id="ai-assistant-widget" class="ai-widget">
+    <!-- Chat Toggle Button -->
+    <div id="ai-toggle-btn" class="ai-toggle-btn" title="AI Assistant">
+        <svg class="ai-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+        </svg>
+        <span class="ai-badge" id="ai-badge" style="display: none;">1</span>
+    </div>
+
+    <!-- Chat Window -->
+    <div id="ai-chat-window" class="ai-chat-window" style="display: none;">
+        <!-- Chat Header -->
+        <div class="ai-chat-header">
+            <div class="ai-header-info">
+                <div class="ai-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="ai-header-text">
+                    <h4>AI Assistant</h4>
+                    <p>MediTrack Helper</p>
+                </div>
+            </div>
+            <div class="ai-header-actions">
+                <button id="ai-minimize-btn" class="ai-btn ai-btn-minimize" title="Minimize">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                </button>
+                <button id="ai-close-btn" class="ai-btn ai-btn-close" title="Close">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="18" y1="6" x2="6" y2="18"></line>
+                        <line x1="6" y1="6" x2="18" y2="18"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="ai-quick-actions" id="ai-quick-actions">
+            <h5>Quick Questions:</h5>
+            <div class="ai-quick-buttons" id="ai-quick-buttons">
+                <!-- Quick answer buttons will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Chat Messages -->
+        <div class="ai-chat-messages" id="ai-chat-messages">
+            <div class="ai-message ai-message-assistant">
+                <div class="ai-message-avatar">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"/>
+                    </svg>
+                </div>
+                <div class="ai-message-content">
+                    <p>Hello! I'm your AI assistant for MediTrack. I can help you with:</p>
+                    <ul>
+                        <li>Stock and inventory management</li>
+                        <li>CSV data analysis</li>
+                        <li>Medicine optimization tips</li>
+                        <li>Expiry date management</li>
+                    </ul>
+                    <p>How can I assist you today?</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- CSV Upload Area -->
+        <div class="ai-csv-upload" id="ai-csv-upload" style="display: none;">
+            <div class="ai-csv-header">
+                <h6>Upload CSV for Analysis</h6>
+                <button id="ai-csv-close" class="ai-btn ai-btn-small">×</button>
+            </div>
+            <div class="ai-csv-content">
+                <input type="file" id="ai-csv-file" accept=".csv" style="display: none;">
+                <button id="ai-csv-select" class="ai-btn ai-btn-secondary">Select CSV File</button>
+                <div id="ai-csv-info" class="ai-csv-info" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="ai-chat-input-container">
+            <div class="ai-input-actions">
+                <button id="ai-csv-btn" class="ai-btn ai-btn-icon" title="Upload CSV">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14,2 14,8 20,8"></polyline>
+                        <line x1="16" y1="13" x2="8" y2="13"></line>
+                        <line x1="16" y1="17" x2="8" y2="17"></line>
+                        <polyline points="10,9 9,9 8,9"></polyline>
+                    </svg>
+                </button>
+                <button id="ai-clear-btn" class="ai-btn ai-btn-icon" title="Clear Chat">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="3,6 5,6 21,6"></polyline>
+                        <path d="M19,6v14a2,2,0,0,1-2,2H7a2,2,0,0,1-2-2V6m3,0V4a2,2,0,0,1,2-2h4a2,2,0,0,1,2,2V6"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="ai-input-wrapper">
+                <textarea id="ai-message-input" placeholder="Ask me about inventory management, stock optimization, or upload a CSV for analysis..." rows="1"></textarea>
+                <button id="ai-send-btn" class="ai-send-btn" disabled>
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22,2 15,22 11,13 2,9 22,2"></polygon>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- Typing Indicator -->
+        <div class="ai-typing-indicator" id="ai-typing-indicator" style="display: none;">
+            <div class="ai-typing-dots">
+                <span></span>
+                <span></span>
+                <span></span>
+            </div>
+            <span>AI is typing...</span>
+        </div>
+    </div>
+</div>

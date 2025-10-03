@@ -116,7 +116,7 @@
                     </span>
                 </td>
                 <td>
-                    <button class="btn btn-sm" onclick="consumeMedicine({{ m.id }})">Consume</button>
+                    <a href="{{ url_for('main.medicines') }}" class="btn btn-sm">View/Consume</a>
                 </td>
             </tr>
         {% endfor %}
@@ -126,80 +126,4 @@
     <p>No medicines expiring soon.</p>
     {% endif %}
 </section>
-
-<!-- Consumption Modal -->
-<div id="consumeModal" class="modal">
-    <div class="modal-content">
-        <span class="close">&times;</span>
-        <h3>Record Consumption</h3>
-        <form id="consumeForm">
-            <input type="hidden" id="medicineId" name="medicine_id">
-            <div class="form-group">
-                <label for="quantity">Quantity to Consume:</label>
-                <input type="number" id="quantity" name="quantity" min="1" required>
-            </div>
-            <div class="form-group">
-                <label for="notes">Notes (optional):</label>
-                <textarea id="notes" name="notes" rows="3"></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary">Record Consumption</button>
-        </form>
-    </div>
-</div>
-
-<script>
-function consumeMedicine(medicineId) {
-    document.getElementById('medicineId').value = medicineId;
-    document.getElementById('consumeModal').style.display = 'block';
-}
-
-// Modal functionality
-const modal = document.getElementById('consumeModal');
-const closeBtn = document.querySelector('.close');
-
-closeBtn.onclick = function() {
-    modal.style.display = 'none';
-}
-
-window.onclick = function(event) {
-    if (event.target == modal) {
-        modal.style.display = 'none';
-    }
-}
-
-// Handle consumption form submission
-document.getElementById('consumeForm').addEventListener('submit', async function(e) {
-    e.preventDefault();
-    
-    const formData = new FormData(this);
-    const data = {
-        medicine_id: parseInt(formData.get('medicine_id')),
-        quantity: parseInt(formData.get('quantity')),
-        notes: formData.get('notes')
-    };
-    
-    try {
-        const response = await fetch(`/medicines/${data.medicine_id}/consume`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(data)
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-            alert(result.message);
-            location.reload();
-        } else {
-            alert('Error: ' + result.error);
-        }
-    } catch (error) {
-        alert('Error recording consumption: ' + error.message);
-    }
-});
-</script>
 {% endblock %}
-
-

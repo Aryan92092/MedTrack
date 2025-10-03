@@ -3,12 +3,16 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from pathlib import Path
 import os
+from dotenv import load_dotenv
 
 db = SQLAlchemy()
 login_manager = LoginManager()
 
 
 def create_app() -> Flask:
+    # Load environment variables from .env if present
+    load_dotenv()
+
     app = Flask(__name__, instance_relative_config=True)
 
     # Basic config

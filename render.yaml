@@ -8,5 +8,9 @@ services:
     envVars:
       - key: SECRET_KEY
         generateValue: true
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: models/gemini-2.5-flash
     healthCheckPath: /
 

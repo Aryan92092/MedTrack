@@ -143,6 +143,40 @@ class AIAssistant:
                 prompt_parts.append(f"Assistant: {content}")
         
         return "\n\n".join(prompt_parts) + "\n\nAssistant:"
+
+    def _extract_text_from_response(self, response: Any) -> Optional[str]:
+        """Safely extract assistant text from a Gemini response object."""
+        # Fast path
+        try:
+            text = getattr(response, 'text', None)
+            if isinstance(text, str) and text.strip():
+                return text
+        except Exception:
+            pass
+
+        # Check candidates/parts
+        try:
+            candidates = getattr(response, 'candidates', None) or []
+            for cand in candidates:
+                content = getattr(cand, 'content', None)
+                parts = getattr(content, 'parts', None) if content else None
+                if parts:
+                    texts = []
+                    for p in parts:
+                        # part.text for text parts; fallback to string cast
+                        t = getattr(p, 'text', None)
+                        if not t:
+                            t = str(getattr(p, 'inline_data', '') or '')
+                        if t:
+                            texts.append(t)
+                    if texts:
+                        joined = "\n".join([t for t in texts if isinstance(t, str) and t.strip()])
+                        if joined.strip():
+                            return joined
+        except Exception:
+            pass
+
+        return None
     
     def generate_response(self, user_id: str, message: str, csv_data: Optional[str] = None, csv_filename: Optional[str] = None) -> str:
         """Generate AI response based on user message and context"""
@@ -202,8 +236,24 @@ class AIAssistant:
                     temperature=0.7
                 )
             )
-            
-            ai_response = response.text
+
+            ai_response = self._extract_text_from_response(response)
+            if not ai_response:
+                # Provide a helpful fallback message, possibly due to safety filters or empty output
+                finish_reason = None
+                try:
+                    if getattr(response, 'candidates', None):
+                        finish_reason = getattr(response.candidates[0], 'finish_reason', None)
+                except Exception:
+                    pass
+                if finish_reason:
+                    return (
+                        "I couldn't provide a response due to safety or generation limits (finish_reason="
+                        f"{finish_reason}). Please try rephrasing your question with more neutral wording."
+                    )
+                return (
+                    "I wasn't able to produce a response just now. Please try rephrasing or asking again."
+                )
             
             # Add AI response to history
             self.add_to_history(user_id, 'assistant', ai_response)

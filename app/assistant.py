@@ -23,13 +23,15 @@ class AIAssistant:
         if api_key:
             # Standard Gemini configuration
             genai.configure(api_key=api_key)
-            # Allow override; default to a broadly available model
+            # Allow override; default to a broadly available model (1.5 flash)
             model_name = (os.getenv('GEMINI_MODEL') or 'gemini-1.5-flash').strip()
             # Normalize accidental resource prefix
             if model_name.startswith('models/'):
                 model_name = model_name.split('/', 1)[1]
             self.model = genai.GenerativeModel(model_name)
         else:
+            # Log or print a warning that the API key is not configured
+            current_app.logger.warning("GEMINI_API_KEY or GOOGLE_API_KEY is not set. AI Assistant will be disabled.")
             self.model = None
         self.conversation_history = {}
         
@@ -261,8 +263,17 @@ class AIAssistant:
             return ai_response
             
         except Exception as e:
-            # Fallback response if Gemini fails
-            error_response = f"I apologize, but I'm having trouble processing your request right now. Error: {str(e)}"
+            # Check for specific API key errors
+            error_str = str(e).lower()
+            if 'api_key' in error_str or 'key' in error_str:
+                error_response = "I'm having trouble connecting to the AI service. Please check if the API key is valid and has not expired. Contact your administrator to verify the Gemini API configuration."
+            elif 'quota' in error_str or 'limit' in error_str:
+                error_response = "I've reached my usage limit for today. Please try again tomorrow or contact your administrator to check the API quota."
+            elif 'network' in error_str or 'connection' in error_str:
+                error_response = "I'm having trouble connecting to the AI service. Please check your internet connection and try again."
+            else:
+                error_response = f"I apologize, but I'm having trouble processing your request right now. Error: {str(e)}"
+            
             self.add_to_history(user_id, 'assistant', error_response)
             return error_response
     

@@ -149,9 +149,19 @@ class AIAssistant {
             if (data && data.success && data.response) {
                 this.addMessage('assistant', data.response);
             } else if (data && data.error) {
-                this.addMessage('assistant', `Sorry, I encountered an error: ${data.error}`);
+                // Check for specific error types
+                const errorMsg = data.error.toLowerCase();
+                if (errorMsg.includes('api_key') || errorMsg.includes('key')) {
+                    this.addMessage('assistant', '🔑 **API Key Issue**: The AI service API key has expired or is invalid. Please contact your administrator to update the Gemini API key in the system configuration.');
+                } else if (errorMsg.includes('quota') || errorMsg.includes('limit')) {
+                    this.addMessage('assistant', '📊 **Usage Limit Reached**: The AI service has reached its daily usage limit. Please try again tomorrow or contact your administrator to check the API quota.');
+                } else if (errorMsg.includes('network') || errorMsg.includes('connection')) {
+                    this.addMessage('assistant', '🌐 **Connection Issue**: Unable to connect to the AI service. Please check your internet connection and try again.');
+                } else {
+                    this.addMessage('assistant', `❌ **Error**: ${data.error}`);
+                }
             } else {
-                this.addMessage('assistant', 'Sorry, I did not receive a response.');
+                this.addMessage('assistant', '❌ **No Response**: Sorry, I did not receive a response from the AI service.');
             }
         } catch (error) {
             this.addMessage('assistant', 'Sorry, I\'m having trouble connecting right now. Please try again later.');

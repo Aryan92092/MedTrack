@@ -108,17 +108,32 @@ python app.py
 
 ### Common Issues
 
-1. **"AI Assistant not responding"**
+1. **"API Key Issue" or "API key expired"**
+   - **Root Cause**: Your Gemini API key has expired or is invalid
+   - **Solution**: 
+     - Go to [Google AI Studio](https://makersuite.google.com/app/apikey)
+     - Generate a new API key
+     - Update your environment variable: `$env:GEMINI_API_KEY="your-new-api-key"`
+     - Restart the application
+   - **Prevention**: Set up API key rotation or monitor usage in Google AI Studio
+
+2. **"Usage Limit Reached"**
+   - **Root Cause**: You've exceeded the daily quota for Gemini API
+   - **Solution**: Wait until the next day or upgrade your API plan
+   - **Check**: Visit Google AI Studio dashboard to see usage statistics
+
+3. **"AI Assistant not responding" (Generic)**
    - Check if GEMINI_API_KEY is set correctly
    - Verify your Gemini API key is valid and has quota
    - Check browser console for JavaScript errors
+   - Ensure you're logged in to the application
 
-2. **"CSV upload not working"**
+4. **"CSV upload not working"**
    - Ensure the file is a valid CSV format
    - Check file size (should be reasonable for processing)
    - Verify the CSV has proper headers
 
-3. **"Styling issues"**
+5. **"Styling issues"**
    - Clear browser cache
    - Check if all CSS files are loading properly
    - Verify the AI widget is included in base.html
@@ -135,9 +150,10 @@ python app.py
 Edit the `get_quick_answers()` method in `app/assistant.py` to customize the quick question buttons.
 
 ### Changing AI Model
-Modify the model parameter in the `__init__()` method in `app/assistant.py`:
-```python
-self.model = genai.GenerativeModel(os.getenv('GEMINI_MODEL') or 'gemini-1.5-flash')  # Set GEMINI_MODEL to override
+By default the app uses `gemini-1.5-flash`.
+To change it, set `GEMINI_MODEL` in your environment or `.env`, for example:
+```
+GEMINI_MODEL=models/gemini-2.5-pro
 ```
 
 ### Styling Customization

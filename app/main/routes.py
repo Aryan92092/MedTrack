@@ -185,7 +185,20 @@ def delete_medicine(med_id: int):
     if med.user_id != int(current_user.get_id()):
         flash('Not authorized to delete this item', 'danger')
         return redirect(url_for('main.medicines'))
+    # Remove from in-memory index first
     inventory_index.remove_medicine(med)
+
+    # Delete dependent rows to satisfy NOT NULL constraints
+    try:
+        db.session.query(ConsumptionRecord).filter(ConsumptionRecord.medicine_id == med.id).delete(synchronize_session=False)
+    except Exception:
+        pass
+    try:
+        db.session.query(InventoryAlert).filter(InventoryAlert.medicine_id == med.id).delete(synchronize_session=False)
+    except Exception:
+        pass
+
+    # Now delete the medicine itself
     db.session.delete(med)
     db.session.commit()
     flash('Medicine deleted', 'success')

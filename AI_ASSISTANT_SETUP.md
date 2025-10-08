@@ -150,7 +150,7 @@ python app.py
 Edit the `get_quick_answers()` method in `app/assistant.py` to customize the quick question buttons.
 
 ### Changing AI Model
-By default the app uses `gemini-1.5-flash`.
+By default, the app uses `gemini-1.5-flash-latest`.
 To change it, set `GEMINI_MODEL` in your environment or `.env`, for example:
 ```
 GEMINI_MODEL=models/gemini-2.5-pro

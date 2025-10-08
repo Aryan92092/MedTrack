@@ -1026,8 +1026,9 @@ def ai_clear_history():
     user_id = str(current_user.get_id())
     
     try:
-        if user_id in ai_assistant.conversation_history:
-            del ai_assistant.conversation_history[user_id]
+        # Clear in-memory chat history for this user
+        if hasattr(ai_assistant, 'conversation_history'):
+            ai_assistant.conversation_history.pop(user_id, None)
         
         return jsonify({
             'success': True,

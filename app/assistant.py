@@ -1,6 +1,7 @@
 import os
 import json
 import pandas as pd
+import io
 from datetime import datetime
 from flask import current_app
 import google.generativeai as genai
@@ -23,11 +24,14 @@ class AIAssistant:
         if api_key:
             # Standard Gemini configuration
             genai.configure(api_key=api_key)
-            # Allow override; default to a broadly available model (1.5 flash)
-            model_name = (os.getenv('GEMINI_MODEL') or 'gemini-1.5-flash').strip()
+            # Allow override; default to a widely-supported model
+            model_name = (os.getenv('GEMINI_MODEL') or 'gemini-1.5-flash-latest').strip()
             # Normalize accidental resource prefix
             if model_name.startswith('models/'):
                 model_name = model_name.split('/', 1)[1]
+            # Upgrade deprecated aliases to -latest variants to avoid 404s
+            if model_name in ('gemini-1.5-flash', 'gemini-1.5-pro'):
+                model_name = f"{model_name}-latest"
             self.model = genai.GenerativeModel(model_name)
         else:
             # Log or print a warning that the API key is not configured
@@ -58,7 +62,7 @@ class AIAssistant:
         """Analyze CSV data and provide insights"""
         try:
             # Read CSV from string
-            df = pd.read_csv(pd.StringIO(csv_content))
+            df = pd.read_csv(io.StringIO(csv_content))
             
             analysis = {
                 'filename': filename,
@@ -107,27 +111,6 @@ class AIAssistant:
                 'error': f"Error analyzing CSV: {str(e)}",
                 'filename': filename
             }
-    
-    def get_stock_insights(self, question: str) -> str:
-        """Provide insights about stock/inventory management"""
-        stock_keywords = {
-            'inventory': 'Inventory management involves tracking stock levels, monitoring expiry dates, and optimizing reorder points.',
-            'expiry': 'Expiry management is crucial for pharmaceutical inventory. Monitor items expiring within 30-90 days and implement FIFO (First In, First Out) rotation.',
-            'reorder': 'Set minimum stock levels based on consumption patterns. Consider lead times and safety stock to prevent stockouts.',
-            'analytics': 'Use consumption analytics to identify trends, seasonal patterns, and optimize inventory levels.',
-            'cost': 'Track purchase costs, selling prices, and profit margins. Monitor total inventory value and identify high-value items.',
-            'alerts': 'Set up automated alerts for low stock, expiring items, and unusual consumption patterns.',
-            'fifo': 'FIFO (First In, First Out) ensures older stock is used first, reducing waste and maintaining product quality.',
-            'safety': 'Maintain safety stock levels to handle unexpected demand spikes or supply delays.',
-            'turnover': 'Inventory turnover ratio indicates how quickly stock is sold. Higher turnover generally means better efficiency.'
-        }
-        
-        question_lower = question.lower()
-        for keyword, insight in stock_keywords.items():
-            if keyword in question_lower:
-                return insight
-        
-        return "I can help with inventory management, stock optimization, expiry tracking, and analytics. What specific aspect would you like to know about?"
     
     def _format_messages_for_gemini(self, messages: List[Dict]) -> str:
         """Convert OpenAI-style messages to Gemini prompt format"""
@@ -191,14 +174,17 @@ class AIAssistant:
             
             # Prepare system message
             system_message = """You are an AI assistant for MediTrack, a medicine inventory management system. 
-            You help users with:
-            1. Stock and inventory management questions
-            2. CSV data analysis and insights
-            3. Medicine inventory optimization
-            4. Expiry date management
-            5. Analytics and reporting
+            Your primary role is to provide expert, practical advice on pharmaceutical inventory management.
             
-            Be helpful, concise, and professional. Focus on practical advice for inventory management."""
+            Key topics you cover:
+            - Stock Management: Best practices for tracking stock, setting reorder points, and managing levels.
+            - Expiry Management: Strategies for handling near-expiry products, FIFO/FEFO, and reducing waste.
+            - Cost Optimization: Advice on reducing inventory holding costs and improving turnover.
+            - Data Analysis: Interpreting user-uploaded CSV data to provide actionable insights.
+            - Analytics & Reporting: Explaining key metrics like inventory turnover, stock-to-sales ratio, and consumption trends.
+            
+            Always be helpful, concise, and professional. When a user asks a general question about a topic (e.g., "tell me about expiry"), provide a comprehensive but easy-to-understand explanation.
+            """
             
             # Prepare messages for OpenAI
             messages = [{"role": "system", "content": system_message}]
@@ -218,11 +204,6 @@ class AIAssistant:
                     csv_context += f"Key insights: {'; '.join(csv_analysis['insights'])}. "
                 
                 messages.append({"role": "assistant", "content": csv_context})
-            
-            # Check if it's a stock-related question
-            if any(keyword in message.lower() for keyword in ['stock', 'inventory', 'expiry', 'reorder', 'analytics', 'cost', 'turnover']):
-                stock_insight = self.get_stock_insights(message)
-                messages.append({"role": "assistant", "content": stock_insight})
             
             # Generate response using Gemini
             if self.model is None:
